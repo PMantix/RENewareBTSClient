@@ -21,6 +21,21 @@ Citations are relative to `vendor/decompiled/` unless a full path is given.
 - F-SYS-5 Observed: the GUI refers to channels like `CHANNEL-127.0.0.1-25-35-4-8-671`
   (`BTSAuto.ini` DaCookie); the meaning of each field is to be confirmed.
 
+## Data at rest (passive monitoring candidates)
+
+- F-DATA-1 Observed: BtsServer writes live test data to
+  `C:\Program Files (x86)\NEWARE\BTSServer80\NdcFile\<yyyymmdd>\<yyyymmdd>_<hhmmss>_<dev>_<unit>_<chl>_<testid>.ndc`
+  plus `_step.ndc` and `_runInfo.ndc`, updated during the run (files for tests started
+  2026-11-11 had mtime 2026-11-13 10:20). ~21k files, 3.7 GB total.
+- F-DATA-2 Inferred: the client reads these with native `NdcReader.dll` (classes
+  `CNdcFileV11..V13+`) and C# wrappers `Common/Common.Ndc/NdcFile.cs`,
+  `Common/Common.Nda/NdaFile.cs`. The `.ndc` format is the same as inside `.ndax`
+  exports, which the open-source Python package `NewareNDA` parses. Lead for a
+  zero-command monitor: read `.ndc` files with shared read access.
+- F-DATA-3 Inferred: MySQL (`MySqlHelper.cs:171`, user/password from BTS config) holds test
+  metadata, e.g. `h_test` (incl. `ndc_path`), `test_note`, `bts902_testinfo_h_*`,
+  step tables. Live point data is not obviously in MySQL.
+
 ## XML API (see docs/api-xml-protocol.md)
 
 - F-API-1 Inferred: `BTSAPI.dll` implements an XML-over-TCP API (default port 502,
