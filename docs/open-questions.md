@@ -20,6 +20,21 @@ Framework 4.x, or a small C# host) and `Client` connected to 127.0.0.1:8001 with
 we reuse Neware's tested protocol code instead of reimplementing it. Need to check its
 dependencies on GUI state, MySQL, SysConfigParam. Blocks transport option 2b.
 
+Partial (Inferred, 2026-11-13): looks promising. `Network.Client` has a plain constructor
+`Client(string strIP, object parent, ClientVersion ver = client801, bool bStart = true)`
+(`Network/Network/Client.cs:7681`), no WinForms references in `Network/Network/*.cs`, and
+public methods such as `SendStartStep(List<Channel>, Common.Step, SysConfigParam, ...)`
+(`:17890`), `SendResetStep` (`:9057`), `SendStop` (used by the API). It needs a user login
+(`_isUserLogin`; `Client.cs:7686`) and the server pushes DB credentials to it
+(`MySqlHelper.SetUserInfo`, `Client.cs:7017`). Still to check: static init the GUI does
+before creating a Client (`BTS.ClientVersion`, language resources, `SysConfigParam` load).
+
+## Q5 (open): protocol details P1-P10
+Listed in `docs/protocol-clientserver.md` §6. The most important are P9 (which device
+types are attached; decides legacy vs Plus code path), P8 (step encoder for start), and
+P3 (whether login needs credentials). Most can be answered from one passive look at the
+device list, or from the PDBs.
+
 ## Q4 (open): does BtsServer allow a second client connection safely?
 BTS.exe already holds two connections to 8001. A third client (ours) must not disrupt the
 GUI's session or the cyclers. Check the server's client handling in `BtsServer.dll` (PDB)

@@ -58,4 +58,24 @@ Citations are relative to `vendor/decompiled/` unless a full path is given.
   Command byte, with 0xFE/0xFF -> 16-bit extended cmd, 0x7F -> "plus" extended cmd;
   length field int16 at offset 10, valid range 15..4095. Some payloads are protobuf
   (`Proto.dll`, Google.ProtocolBuffers 2.x).
-- F-CS-2 Inferred: main protocol client is `Network/Network/Client.cs` (~20k lines).
+- F-CS-2 Inferred: main protocol client is `Network/Network/Client.cs` (~20k lines). The GUI
+  creates one `Client` per server node (`BTSLib/BTS/MainFrame.cs:14807`).
+- F-CS-3 Inferred: frame = `FF x8`, devID u8 @8, unitID u8 @9, total length u16 LE @10,
+  cmd u8 @12, body, checksum u8 (8-bit sum of bytes 8..n-3), trailer `0x5A`
+  (`NetworkBase/Network/Packet.cs`). Extended commands: client sends cmd 0xFE with u16
+  cmdEx @13; response cmdEx = request | 0x8000. Login example:
+  `FF FF FF FF FF FF FF FF 00 00 12 00 00 03 01 02 18 5A` (checksum verified by hand).
+- F-CS-4 Inferred: three body styles on one socket: fixed C structs (legacy), u32-length
+  protobuf (BTS82-84), "Plus" header+protobuf (BTS85, and on recent 8.0 servers also
+  heartbeat/device list/subscribe). 131 `.proto` schemas recovered into `vendor/protos/`
+  by `tools/dump_protos.py`.
+- F-CS-5 Inferred: handshake = Login (0x00) -> server pushes version (0x0081, includes
+  build date that gates features, and the MySQL credentials lightly obfuscated) ->
+  GetDevList (Plus 0x021B) -> SelectDev (Plus 0x021F, this is the data subscription) ->
+  channel layout -> heartbeat every 10 s (Plus 0x0211). Realtime data is then pushed
+  unsolicited (0x80BE / 0x80D4 / Plus 0x0202 depending on devType).
+- F-CS-6 Inferred: control: Stop 0x000A / Plus 0x0208, Continue 0x000D / Plus 0x0209,
+  Jump 0x0070 / 0x00EC / Plus 0x020A. "Pause" from the GUI is a Stop that Continue can
+  resume. Start is a multi-packet transaction keyed by a GUID; the step XML is re-encoded
+  (`ProtoStep.Encode` or `Step.EncodeBts80`), never sent as-is.
+- Full detail with citations: `docs/protocol-clientserver.md` (its questions are P1-P10).

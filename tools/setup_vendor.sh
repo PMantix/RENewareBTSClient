@@ -30,3 +30,7 @@ for a in BTSAPI BTS BTSLib Common Proto Network NetworkBase Interface Communicat
   dotnet "$ILS" -p -o "$V/decompiled/$a" -r "$V/client" "$f" >/dev/null 2>"$V/decompiled/$a.err" \
     && echo "ok   $a" || echo "FAIL $a (see vendor/decompiled/$a.err)"
 done
+
+# Recover .proto schemas from descriptors embedded in the decompiled Proto sources
+mkdir -p "$V/protos"
+python -I "$R/tools/dump_protos.py" "$V/decompiled/Proto" "$V/protos" && echo "ok   protos -> vendor/protos"
