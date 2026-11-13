@@ -1,0 +1,18 @@
+# Neware binaries, configs and decompiled output: proprietary and large, never commit
+vendor/
+
+# Raw packet captures stay local; commit text/decoded exports instead
+*.pcap
+*.pcapng
+
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/
+
+# Per-machine Claude Code settings
+.claude/settings.local.json
+
+# Session logs (copy the ones a report cites into captures/<date>/)
+logs/
