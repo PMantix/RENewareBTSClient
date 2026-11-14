@@ -45,7 +45,10 @@ Cyclers source/sink amps into real cells, often unattended for days.
    findings F-API-2). Obtaining a code from Neware is the legitimate route.
 6. Every code path that starts a channel must be able to stop it: wrap in try/finally,
    and log every command sent with timestamp.
-7. Never invent protocol commands on live hardware. A command is usable when it is
+7. Files under `BTSServer80\NdcFile\` are being written by the server: read them only
+   through `btsmon.safe_read.read_shared` (full share flags, handle closed at once), never
+   with plain `open()`/`shutil`/editors, never write/rename/delete there, poll >= 30 s.
+8. Never invent protocol commands on live hardware. A command is usable when it is
    documented here as Observed (seen in a capture) or the user approves a first test on
    a free channel with no cell / a dummy load.
 
@@ -66,15 +69,17 @@ Cyclers source/sink amps into real cells, often unattended for days.
 
 | Phase | What | Status |
 |---|---|---|
-| 0 | Static RE: decompile client, document XML API + client/server protocol | in progress |
-| 1 | Read-only monitoring (MySQL SELECTs and/or passive read of the 8001 protocol) | todo |
+| 0 | Static RE: decompile client, document XML API + client/server protocol | done |
+| 1 | Read-only monitoring: `btsmon.monitor` from live NDC files (done); finished/stopped/protect state still missing | partly done |
 | 2 | Transport for control. Candidates: (a) Neware XML API, needs registration code from Neware; (b) host Neware's own `Network.dll` `Client` class from our process (pythonnet/C#); (c) our own Python implementation of the 8001 protocol | todo |
 | 3 | Control on a free test channel with dummy load: start/stop/pause/continue/goto | todo |
 | 4 | Python driver + MCP server with guardrails (channel allowlist, limits, audit log) | todo |
 
 ## Repo conventions
 
-- Python 3.10+. Keep dependencies minimal, listed in `pyproject.toml` (when added).
+- Python 3.10+. This PC only has 32-bit Python 3.12 (no pandas wheels), so keep the core
+  stdlib-only. Venv: `python -m venv .venv`, `.venv\Scripts\pip install -e .[test]`;
+  tests: `.venv\Scripts\python -m pytest`.
 - Tests run without hardware against recorded captures.
 - Never commit anything from `vendor/`, Neware binaries, or decompiled source.
   Short excerpts (a few lines) quoted in docs for citation are fine.

@@ -11,3 +11,13 @@ driver and MCP server so an agent can monitor, start, stop and run tests autonom
 - Open questions: [docs/open-questions.md](docs/open-questions.md)
 
 Rebuild the local (git-ignored) `vendor/` folder with `bash tools/setup_vendor.sh`.
+
+## Monitor (read-only, available now)
+
+```
+.venv\Scripts\python -m btsmon.monitor            # latest test per channel
+.venv\Scripts\python -m btsmon.monitor --live     # only channels running now
+.venv\Scripts\python -m btsmon.monitor --json --watch 60
+```
+Reads the server's live `.ndc` files with full file sharing; sends nothing to the
+server, cyclers or database.

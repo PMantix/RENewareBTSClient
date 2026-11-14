@@ -47,6 +47,24 @@ Citations are relative to `vendor/decompiled/` unless a full path is given.
   metadata, e.g. `h_test` (incl. `ndc_path`), `test_note`, `bts902_testinfo_h_*`,
   step tables. Live point data is not obviously in MySQL.
 
+- F-DATA-4 Observed (2026-11-13): live NDC files are **version 11**. Per test:
+  `<stem>.ndc` (filetype 1, V/I per point: `<ff` V*1e4 and mA, pages of 4096 B with 132 B
+  page header), `_runInfo.ndc` (18: step time, capacity mAs, energy, dt, epoch timestamp,
+  step, index; sparse, ~every 7th point), `_step.ndc` (7: cycle, step no, step type),
+  plus `_log.ndc` (9) and `_es.ndc` (16), not yet decoded. NewareNDA's v11 layouts decode
+  them correctly (plausible V/I, step sequence, timestamps). Implemented in `btsmon/ndc.py`.
+- F-DATA-5 Observed: reading with `btsmon/safe_read.py` (CreateFileW, share
+  read+write+delete, read-only) holds each handle 0.2-8 ms for 8-160 kB files. A full scan of
+  30 days (32 channels, ~100 files) takes ~2.4 s.
+- F-DATA-6 Observed: middle-machine clocks (devices 35 and 62) are ~1 h ahead of the PC
+  (EST): NDC timestamps vs file mtime differ by +3400..+3650 s, the rest being the
+  server's write lag. Probably DST not applied on the devices. Use relative times and
+  file mtimes; don't trust device timestamps as wall-clock time.
+- F-DATA-7 Observed: server flushes NDC files every few minutes (data age 3 min at scan),
+  data interval 10 s on the running tests. NDC files do not say whether an ended test
+  finished, was stopped or hit a protection (maybe in `_log.ndc`); a channel whose file
+  stopped growing is only "not live".
+
 ## XML API (see docs/api-xml-protocol.md)
 
 - F-API-1 Inferred: `BTSAPI.dll` implements an XML-over-TCP API (default port 502,
