@@ -38,6 +38,11 @@ Cyclers source/sink amps into real cells, often unattended for days.
    (allowlist `config/test_channels.json`; only the user adds channels to it, never an agent). Code must refuse
    any control command on a channel not in the allowlist. Never on a channel that is
    currently `working`/`pause`, unless the user names it.
+   Every MCP control/start call also states what the agent **expects** on the channel
+   (state, voltage window, test id; for a start: idle + the loaded cell's voltage window),
+   taken from the user or the plan, not copied from a fresh reading. `control.check_expect`
+   compares it with the live feed at prepare and again right before sending; a mismatch
+   refuses and is reported to the user, never "fixed" by loosening the expectation.
 4. **MySQL is read-only for us.** `SELECT` only. Never `INSERT/UPDATE/DELETE/ALTER`.
 5. Never modify the Neware install, registry, licence/registration, calibration,
    cycler firmware ("ZWJ/XWJ upgrade"), device IDs or server config.
@@ -78,8 +83,8 @@ Cyclers source/sink amps into real cells, often unattended for days.
 | 1 | Read-only monitoring: `btsmon.monitor` + MCP server `btsmon.mcp_server` from live NDC files, incl. finished/stopped/protect from `_log.ndc` | done |
 | 1b | Live read-only feed over 8001 (`btsmon.live`, 2 s), used by the MCP server | done |
 | 2 | Transport for control. Candidates: (a) Neware XML API, needs registration code from Neware; (b) host Neware's own `Network.dll` `Client` class from our process (pythonnet/C#); (c) our own Python implementation of the 8001 protocol | todo |
-| 3 | Control on a free test channel: pause/resume, jump, clear flag done on 62-1-1 (F-CS-12, F-CS-13); start: step codec `btsmon/steps.py` + step-file reader `btsmon/stepfile.py` verified vs server logs (F-STEP-1..5), GUI start defaults `btsmon/gui_defaults.py` (F-STEP-4, -6); start transaction `btsmon/start.py` + `tools/start_test.py` (F-START-1..6), first live start OK on 62-1-1 (test 142); MCP start tool todo | in progress |
-| 4 | MCP server with guardrails: monitoring + live feed done; pause/resume/jump/clear via allowlist + prepare/execute token (`btsmon/control.py`) done; start todo | in progress |
+| 3 | Control on a free test channel: pause/resume, jump, clear flag done on 62-1-1 (F-CS-12, F-CS-13); start: step codec `btsmon/steps.py` + step-file reader `btsmon/stepfile.py` verified vs server logs (F-STEP-1..5), GUI start defaults `btsmon/gui_defaults.py` (F-STEP-4, -6); start transaction `btsmon/start.py` + `tools/start_test.py` (F-START-1..6), first live start OK on 62-1-1 (test 142) | in progress |
+| 4 | MCP server with guardrails: monitoring + live feed done; pause/resume/jump/clear and start (`prepare_start_test`) via allowlist + expectation check + prepare/execute token (`btsmon/control.py`) done | done |
 
 ## Repo conventions
 

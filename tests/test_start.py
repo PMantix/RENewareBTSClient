@@ -110,10 +110,10 @@ def test_build_plan_refusals():
 
 
 # ---- transaction against a fake server -------------------------------------------------
-def _reply(cmd_ex, result=0, tests=()):
+def _reply(cmd_ex, result=0, tests=(), guid=GUID):
     req = cmd_ex & 0x7FFF
     if req == T.CMD_MAP:
-        body = bytes([25]) + GUID
+        body = bytes([25]) + guid
     elif req == T.CMD_BARCODE:
         pr = T.pb_int(1, 25) + T.pb_int(2, 62) + T.pb_int(4, result) + T.pb_bytes(5, GUID)
         body = bytes([25, 0]) + struct.pack("<II", 0, len(pr)) + pr
@@ -151,6 +151,8 @@ def _fake_server(received, start_result=0):
                     c.sendall(P.frame(bytes([0xFE, 0x00]) + struct.pack("<H", 0x80E4) + b"\0" * 8, 62, 1))  # a push
                     if cmd == T.CMD_START:
                         c.sendall(_reply(cmd | 0x8000, start_result, [(1, 1, 142)] if start_result == 0 else []))
+                    elif cmd == T.CMD_MAP:
+                        c.sendall(_reply(cmd | 0x8000, guid=f[16:32]))    # echo the request's guid
                     else:
                         c.sendall(_reply(cmd | 0x8000))
         except OSError:
@@ -179,3 +181,85 @@ def test_failed_start_reply_sends_safety_pause():
     r = T.run_plan(plan(), port=_fake_server(received, start_result=3), out=lambda s: None)
     assert not r.ok and r.failed_stage == "start" and r.start_sent and r.stop_sent
     assert received[-1][12:15] == bytes([0xFE, 0x0A, 0x00])
+
+
+# ---- Controller start (MCP prepare/execute) --------------------------------------------
+import json  # noqa: E402
+
+from btsmon import control as C  # noqa: E402
+from btsmon import gui_defaults as G  # noqa: E402
+
+
+class StartFeed:
+    def __init__(self, state="idle"):
+        self.ch = {"work_state": state, "work_type": 0, "step_no": 0, "step_time_s": 0.0,
+                   "voltage_v": 0.445, "current_ma": 0.0, "test_id": 141}
+
+    def channel(self, name):
+        return dict(self.ch, live=True, age_s=0.1) if name == "62-1-1" else None
+
+    def snapshot(self):
+        return {"devices": {62: dict(DEV62, voltage_range_v=5.0)}}
+
+
+@pytest.fixture
+def ctl_env(tmp_path, monkeypatch):
+    p = tmp_path / "allow.json"
+    p.write_text(json.dumps({"channels": {"62-1-1": dict(CH, load="none")}}))
+    monkeypatch.setattr(C, "load_allowlist", lambda path=str(p): json.loads(p.read_text())["channels"])
+    monkeypatch.setattr(G, "load_sysset", lambda path=None: SYSSET)
+    monkeypatch.setattr(T, "load_sysglobal", lambda path=None: SYSGLOBAL)
+    xml = tmp_path / "test_rest.xml"
+    xml.write_bytes(open(os.path.join(DATA, "test_rest.xml"), "rb").read())
+    return tmp_path, xml
+
+
+def test_prepare_start_summary_and_refusals(ctl_env):
+    tmp, xml = ctl_env
+    ctl = C.Controller(StartFeed(), port=1, log_dir=str(tmp))
+    p = ctl.prepare_start("62-1-1", str(xml))
+    assert p["steps"][0].startswith("1: rest: t 36000 s") and p["steps"][-1] == "3: end"
+    assert p["packets"][-2:] == ["start", "confirm"]
+    with pytest.raises(C.ControlRefused, match="allowlist"):
+        ctl.prepare_start("35-1-1", str(xml))
+    with pytest.raises(C.ControlRefused, match="idle"):
+        C.Controller(StartFeed("running"), port=1).prepare_start("62-1-1", str(xml))
+    hot = tmp / "hot.xml"
+    hot.write_text(xml.read_text().replace('<Time Value="36000000"', '<Curr Value="80" /><Time Value="36000000"'))
+    with pytest.raises(C.ControlRefused, match="exceeds the channel range|not supported"):
+        ctl.prepare_start("62-1-1", str(hot))
+
+
+def test_execute_start_token_against_fake_server(ctl_env):
+    tmp, xml = ctl_env
+    feed = StartFeed()
+    received = []
+    ctl = C.Controller(feed, port=_fake_server(received), log_dir=str(tmp))
+    tok = ctl.prepare_start("62-1-1", str(xml))["token"]
+    threading.Timer(1.0, lambda: feed.ch.update(work_state="running", step_no=1, test_id=142)).start()
+    r = ctl.execute_token(tok)
+    assert r.ok and r.response["tests"] == [(1, 1, 142)] and r.after["test_id"] == 142
+    assert [struct.unpack_from("<H", f, 13)[0] for f in received[1:]][-2:] == [0xEB, 0xE3]
+    assert list(tmp.glob("control_*_start_62-1-1.log"))
+    with pytest.raises(C.ControlRefused, match="unknown or expired"):
+        ctl.execute_token(tok)
+
+
+def test_execute_start_refuses_changed_file(ctl_env):
+    tmp, xml = ctl_env
+    ctl = C.Controller(StartFeed(), port=1, log_dir=str(tmp))
+    tok = ctl.prepare_start("62-1-1", str(xml))["token"]
+    xml.write_bytes(xml.read_bytes() + b"\n")
+    with pytest.raises(C.ControlRefused, match="changed since prepare"):
+        ctl.execute_token(tok)
+
+
+def test_start_expectations(ctl_env):
+    tmp, xml = ctl_env
+    ctl = C.Controller(StartFeed(), port=1, log_dir=str(tmp))
+    p = ctl.prepare_start("62-1-1", str(xml), C.Expect("idle", 0.3, 0.6))     # no cell: floats ~0.445 V
+    assert p["expected"]["voltage_v"] == [0.3, 0.6]
+    with pytest.raises(C.ControlRefused, match="voltage is 0.445 V, expected 2.5..4.3 V"):
+        ctl.prepare_start("62-1-1", str(xml), C.Expect("idle", 2.5, 4.3))     # "a cell was just loaded"
+    with pytest.raises(C.ControlRefused, match="idle"):
+        ctl.prepare_start("62-1-1", str(xml), C.Expect("running", 0.3, 0.6))

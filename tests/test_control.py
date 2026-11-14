@@ -130,3 +130,25 @@ def test_execute_rechecks_state_before_sending(allowlist, tmp_path):
     states["62-1-1"]["work_state"] = "idle"          # changed between prepare and execute
     with pytest.raises(C.ControlRefused, match="needs 62-1-1 to be running"):
         ctl.execute_token(tok)                       # port=1: would fail if it tried to connect
+
+
+def test_expectations_must_match_the_channel(allowlist):
+    feed = FakeFeed({"62-1-1": dict(run_state("running", step=2), test_id=142)})
+    ctl = C.Controller(feed)
+    ok = C.Expect("running", 0.3, 0.6, 142)
+    assert ctl.prepare("pause", "62-1-1", expect=ok)["expected"]["test_id"] == 142
+    for exp, msg in ((C.Expect("stopped", 0.3, 0.6, 142), "state is 'running'"),
+                     (C.Expect("running", 3.0, 4.2, 142), "voltage is 0.445 V"),
+                     (C.Expect("running", 0.3, 0.6, 141), "test id is 142"),
+                     (C.Expect("running", 0.6, 0.3, 142), "min < max")):
+        with pytest.raises(C.ControlRefused, match=msg):
+            ctl.prepare("pause", "62-1-1", expect=exp)
+
+
+def test_expectations_rechecked_before_sending(allowlist):
+    states = {"62-1-1": dict(run_state("running"), test_id=142)}
+    ctl = C.Controller(FakeFeed(states), port=1)
+    tok = ctl.prepare("pause", "62-1-1", expect=C.Expect("running", 0.3, 0.6, 142))["token"]
+    states["62-1-1"]["voltage_v"] = 3.7                 # something changed on the channel
+    with pytest.raises(C.ControlRefused, match="voltage is 3.7 V"):
+        ctl.execute_token(tok)                          # port=1: would fail if it tried to send

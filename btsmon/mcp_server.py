@@ -1,8 +1,9 @@
-"""MCP server exposing the read-only Neware BTS monitor to AI agents.
+"""MCP server exposing the Neware BTS monitor (and guarded controls) to AI agents.
 
-All tools are read-only: they read BtsServer's live .ndc files with full file sharing
-(btsmon.safe_read) and send nothing to BtsServer, the cyclers or MySQL. Results are
-cached for MIN_POLL_S so agents cannot poll the files faster than that.
+Monitoring tools are read-only: they read BtsServer's live .ndc files with full file
+sharing (btsmon.safe_read) and the live feed. Results are cached for MIN_POLL_S so agents
+cannot poll the files faster than that. Control tools (pause/resume/jump/clear/start) work
+only on allowlisted channels and need a prepare call, the user's OK and an execute call.
 
 Run (stdio):  .venv\\Scripts\\python -m btsmon.mcp_server
 """
@@ -18,7 +19,7 @@ from mcp.types import ToolAnnotations
 
 from . import logcodes
 from .live import LiveFeed
-from .control import ACTIONS, ControlRefused, Controller, load_allowlist
+from .control import ACTIONS, ControlRefused, Controller, Expect, load_allowlist
 from .ndc import STEP_TYPES
 from .monitor import DEFAULT_ROOT, MIN_POLL_S, ChannelState, TestFiles, discover, read_state
 from .ndc import parse_data, parse_log, parse_runinfo, parse_steps
@@ -43,10 +44,16 @@ server = MCPServer(
         "device clock. Current is in mA (negative = discharge), capacity in mAh. "
         "CONTROL: pause/resume/jump/clear exist ONLY for channels in the user's allowlist "
         "(list_control_channels) and need two calls: prepare_channel_command (checks, returns a "
-        "summary + token) then execute_channel_command(token). Show the summary to the user and "
+        "summary + token) then execute_channel_command(token). Every prepare call states what you "
+        "expect on the channel (state, voltage window, test id; for a start: idle and the cell's "
+        "voltage window). Take these from the user or the plan, never from a reading you just "
+        "made; a mismatch means the channel is not what everyone thinks it is: stop and tell the user. Show the summary to the user and "
         "get their explicit OK before executing. Never try to control a channel that is not "
-        "allowlisted, and never retry a refused command in a different way. Starting tests is "
-        "not supported."),
+        "allowlisted, and never retry a refused command in a different way. "
+        "START: prepare_start_test(channel, step_file) checks an idle allowlisted channel and a "
+        "BTS .xml step file (plain CC/CV/CCCV/rest/cycle/end schedules; others are refused) and "
+        "returns the steps in readable units + a token; show them to the user, get an explicit "
+        "OK, then execute_channel_command(token). A started test is stopped with pause + clear."),
 )
 
 _lock = threading.Lock()
@@ -223,30 +230,62 @@ def list_control_channels() -> dict:
                      "work_state": lv and lv["work_state"], "step_no": lv and lv["step_no"],
                      "live": bool(lv and lv["live"])}
     return {"channels": out,
-            "actions": {k: {"allowed_from": a.allowed_from, "result": a.expect, "what": a.description}
-                        for k, a in ACTIONS.items()}}
+            "actions": dict({k: {"allowed_from": a.allowed_from, "result": a.expect, "what": a.description}
+                             for k, a in ACTIONS.items()},
+                            start={"allowed_from": ("idle",), "result": "running",
+                                   "what": "Start a step file from step 1 (use prepare_start_test)."})}
 
 
 @server.tool(annotations=RO)
-def prepare_channel_command(channel: str, action: str, step: int | None = None) -> dict:
-    """Step 1 of 2 for a control command. Checks the allowlist and the channel's live state
-    and returns a summary and a one-time token (valid 60 s). Sends nothing.
+def prepare_channel_command(channel: str, action: str, expected_state: str,
+                            expected_voltage_min_v: float, expected_voltage_max_v: float,
+                            expected_test_id: int, step: int | None = None) -> dict:
+    """Step 1 of 2 for a control command. Checks the allowlist, then that the channel looks
+    the way you expect it to, then returns a summary and a one-time token (valid 60 s).
+    Sends nothing.
 
     action: pause | resume | jump | clear.  step: target step number (jump only).
+    expected_*: what you believe is on the channel, from the user or your plan (which test,
+    its state, the cell voltage range), NOT copied from a reading you just took. Any mismatch
+    refuses the command; report it to the user instead of changing the expectation.
     Show the returned summary to the user and get an explicit OK before step 2.
     """
     if _ctl is None:
         return {"refused": "controls unavailable: live feed disabled"}
     try:
-        return _ctl.prepare(action, channel, step)
+        exp = Expect(expected_state, expected_voltage_min_v, expected_voltage_max_v, expected_test_id)
+        return _ctl.prepare(action, channel, step, exp)
     except (ControlRefused, ValueError) as e:
+        return {"refused": str(e)}
+
+
+@server.tool(annotations=RO)
+def prepare_start_test(channel: str, step_file: str, expected_voltage_min_v: float,
+                       expected_voltage_max_v: float) -> dict:
+    """Step 1 of 2 for starting a test. Checks that the channel is allowlisted, idle (no test
+    running) and shows a voltage inside the expected window (e.g. a cell just loaded for
+    formation: its open-circuit voltage range, from the user / cell spec, not copied from a
+    reading you just took; a channel with no cell floats near 0.4-0.5 V). Then loads
+    the BTS .xml step file (refusing anything not supported, or currents/voltages beyond the
+    channel's range), applies the GUI's start defaults, and returns the steps in readable
+    units plus a one-time token (valid 60 s). Sends nothing.
+
+    step_file: absolute path of a BTS Client step file (.xml).
+    Show the steps to the user and get an explicit OK, then execute_channel_command(token).
+    """
+    if _ctl is None:
+        return {"refused": "controls unavailable: live feed disabled"}
+    try:
+        return _ctl.prepare_start(channel, step_file,
+                                  Expect("idle", expected_voltage_min_v, expected_voltage_max_v))
+    except (ControlRefused, ValueError, OSError) as e:
         return {"refused": str(e)}
 
 
 @server.tool(annotations=CTRL)
 def execute_channel_command(token: str) -> dict:
-    """Step 2 of 2: send the command prepared with prepare_channel_command, after the user
-    explicitly approved it. Re-checks allowlist and state, sends, then verifies the result on
+    """Step 2 of 2: send the command prepared with prepare_channel_command or
+    prepare_start_test, after the user explicitly approved it. Re-checks allowlist and state, sends, then verifies the result on
     the live feed. Returns ok, the server response and the before/after channel state."""
     if _ctl is None:
         return {"refused": "controls unavailable: live feed disabled"}
@@ -254,6 +293,11 @@ def execute_channel_command(token: str) -> dict:
         r = _ctl.execute_token(token)
     except (ControlRefused, ValueError, OSError) as e:
         return {"refused": str(e), "sent": False}
+    if r.action == "start":
+        return {"ok": r.ok, "action": "start", "channel": r.channel, "result": r.response,
+                "before": r.before, "after": r.after, "log": r.log[-12:],
+                "note": None if r.ok else ("Not confirmed. If start_sent is true a safety pause was "
+                                           "attempted; ask the user to check the GUI.")}
     return {"ok": r.ok, "action": r.action, "channel": r.channel, "response": r.response,
             "before": r.before, "after": r.after, "sent_bytes": r.sent_hex,
             "note": None if r.ok else "Not confirmed on the live feed: ask the user to check the GUI."}

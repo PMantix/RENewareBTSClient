@@ -303,6 +303,46 @@ class StartPlan:
         return Stage("confirm", CMD_CONFIRM, pkt_confirm(self.dev_type, self.dev_id, self.unit, self.guid, tests))
 
 
+def check_limits(records: list[S.StepRecord], max_curr_ma: float, max_volt_v: float | None) -> None:
+    """Refuse a schedule whose currents exceed the channel's range or whose voltages exceed
+    the device's voltage range."""
+    for r in records:
+        for k in ("limit_curr", "cutoff_curr"):
+            v = r.fields.get(k)
+            if v is not None and abs(float(v)) > max_curr_ma + 1e-9:
+                raise ValueError(f"step {r.step_index} {k} {v} mA exceeds the channel range {max_curr_ma} mA")
+        if max_volt_v:
+            for k in ("limit_volt", "cutoff_volt"):
+                v = r.fields.get(k)
+                if v is not None and abs(float(v)) / 10000 > max_volt_v + 1e-9:
+                    raise ValueError(f"step {r.step_index} {k} {float(v) / 10000} V exceeds the device range {max_volt_v} V")
+
+
+_DESC = {"limit_curr": ("I", 1, "mA"), "limit_volt": ("V", 1e-4, "V"), "limit_time": ("t", 1e-3, "s"),
+         "limit_cap": ("cap", 1 / 3600, "mAh"), "cutoff_curr": ("stop I", 1, "mA"),
+         "cutoff_volt": ("stop V", 1e-4, "V"), "limit_rate": ("rate", 1, "C"),
+         "cycle_count": ("cycles", 1, ""), "start_step": ("from step", 1, ""),
+         "prt_volt_h": ("prot V <", 1e-4, "V"), "prt_volt_l": ("prot V >", 1e-4, "V"),
+         "prt_curr_abs": ("prot |dI| <", 1, "mA")}
+
+
+def describe(records: list[S.StepRecord]) -> list[str]:
+    """One human-readable line per step (V, mA, mAh, s)."""
+    out = []
+    for r in records:
+        parts = []
+        for k, v in r.fields.items():
+            if k in _DESC:
+                name, scale, unit = _DESC[k]
+                parts.append(f"{name} {float(v) * scale:g}" + (f" {unit}" if unit else ""))
+        rem = r.fields.get("remark")
+        line = f"{r.step_index}: {r.type_name}" + (": " + ", ".join(parts) if parts else "")
+        if isinstance(rem, str) and rem:
+            line += f"  ({rem})"
+        out.append(line)
+    return out
+
+
 def build_plan(step_file: str, ch: dict, device: dict, sysset: dict, sysglobal: dict,
                now: datetime | None = None, guid: bytes | None = None) -> StartPlan:
     """Everything the GUI would send for a single-channel start of `step_file` on channel
@@ -332,6 +372,7 @@ def build_plan(step_file: str, ch: dict, device: dict, sysset: dict, sysglobal: 
 
     records, info = stepfile.load(step_file)
     gui_defaults.apply(records, sysset, rng["chg_range_ma"], rng["ranges_ma"], rng["parallel"])
+    check_limits(records, rng["chg_range_ma"], device.get("voltage_range_v"))
     if info.get("start_step", 1) != 1:
         raise ValueError("Start_Step != 1 not supported")
 
