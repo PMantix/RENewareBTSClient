@@ -35,7 +35,7 @@ Cyclers source/sink amps into real cells, often unattended for days.
    API (502), a cycler, or MySQL. Say exactly what goes where. Reads (device list,
    channel status, live data) still need a one-time OK per new transport.
 3. **Control commands only on channels the user has named as free test channels**
-   (keep the allowlist in `config/test_channels.json` once it exists). Code must refuse
+   (allowlist `config/test_channels.json`; only the user adds channels to it, never an agent). Code must refuse
    any control command on a channel not in the allowlist. Never on a channel that is
    currently `working`/`pause`, unless the user names it.
 4. **MySQL is read-only for us.** `SELECT` only. Never `INSERT/UPDATE/DELETE/ALTER`.
@@ -79,7 +79,7 @@ Cyclers source/sink amps into real cells, often unattended for days.
 | 1b | Live read-only feed over 8001 (`btsmon.live`, 2 s), used by the MCP server | done |
 | 2 | Transport for control. Candidates: (a) Neware XML API, needs registration code from Neware; (b) host Neware's own `Network.dll` `Client` class from our process (pythonnet/C#); (c) our own Python implementation of the 8001 protocol | todo |
 | 3 | Control on a free test channel: pause/resume, jump, clear flag done on 62-1-1 (F-CS-12, F-CS-13); start todo | in progress |
-| 4 | Python driver + MCP server with guardrails (channel allowlist, limits, audit log) | todo |
+| 4 | MCP server with guardrails: monitoring + live feed done; pause/resume/jump/clear via allowlist + prepare/execute token (`btsmon/control.py`) done; start todo | in progress |
 
 ## Repo conventions
 

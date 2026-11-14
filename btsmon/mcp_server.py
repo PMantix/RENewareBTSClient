@@ -18,6 +18,7 @@ from mcp.types import ToolAnnotations
 
 from . import logcodes
 from .live import LiveFeed
+from .control import ACTIONS, ControlRefused, Controller, load_allowlist
 from .ndc import STEP_TYPES
 from .monitor import DEFAULT_ROOT, MIN_POLL_S, ChannelState, TestFiles, discover, read_state
 from .ndc import parse_data, parse_log, parse_runinfo, parse_steps
@@ -28,6 +29,8 @@ DAYS = int(os.environ.get("BTSMON_DAYS", "60"))
 LIVE_ENABLED = os.environ.get("BTSMON_LIVE", "1") != "0"
 _live: LiveFeed | None = None
 RO = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
+CTRL = ToolAnnotations(readOnlyHint=False, destructiveHint=True, idempotentHint=False, openWorldHint=False)
+_ctl: Controller | None = None
 
 server = MCPServer(
     name="neware-bts-monitor",
@@ -38,7 +41,12 @@ server = MCPServer(
         "capacity come from the server's realtime stream (~2 s old, source='live'); otherwise "
         "from the server's data files (up to a few minutes old, source='files'). Device clocks run ~1 h ahead of the PC; 'device_time' fields use the "
         "device clock. Current is in mA (negative = discharge), capacity in mAh. "
-        "This server cannot start, stop or change anything."),
+        "CONTROL: pause/resume/jump/clear exist ONLY for channels in the user's allowlist "
+        "(list_control_channels) and need two calls: prepare_channel_command (checks, returns a "
+        "summary + token) then execute_channel_command(token). Show the summary to the user and "
+        "get their explicit OK before executing. Never try to control a channel that is not "
+        "allowlisted, and never retry a refused command in a different way. Starting tests is "
+        "not supported."),
 )
 
 _lock = threading.Lock()
@@ -203,10 +211,59 @@ def explain_log_code(code: str) -> dict:
             "severity_lamp": lc.lamp if lc else None}
 
 
+@server.tool(annotations=RO)
+def list_control_channels() -> dict:
+    """Channels the user has released for control commands (config/test_channels.json),
+    with their live state, and the available actions."""
+    allow = load_allowlist()
+    out = {}
+    for name, ch in allow.items():
+        lv = _live.channel(name) if _live else None
+        out[name] = {"load": ch.get("load"), "approved": ch.get("approved"),
+                     "work_state": lv and lv["work_state"], "step_no": lv and lv["step_no"],
+                     "live": bool(lv and lv["live"])}
+    return {"channels": out,
+            "actions": {k: {"allowed_from": a.allowed_from, "result": a.expect, "what": a.description}
+                        for k, a in ACTIONS.items()}}
+
+
+@server.tool(annotations=RO)
+def prepare_channel_command(channel: str, action: str, step: int | None = None) -> dict:
+    """Step 1 of 2 for a control command. Checks the allowlist and the channel's live state
+    and returns a summary and a one-time token (valid 60 s). Sends nothing.
+
+    action: pause | resume | jump | clear.  step: target step number (jump only).
+    Show the returned summary to the user and get an explicit OK before step 2.
+    """
+    if _ctl is None:
+        return {"refused": "controls unavailable: live feed disabled"}
+    try:
+        return _ctl.prepare(action, channel, step)
+    except (ControlRefused, ValueError) as e:
+        return {"refused": str(e)}
+
+
+@server.tool(annotations=CTRL)
+def execute_channel_command(token: str) -> dict:
+    """Step 2 of 2: send the command prepared with prepare_channel_command, after the user
+    explicitly approved it. Re-checks allowlist and state, sends, then verifies the result on
+    the live feed. Returns ok, the server response and the before/after channel state."""
+    if _ctl is None:
+        return {"refused": "controls unavailable: live feed disabled"}
+    try:
+        r = _ctl.execute_token(token)
+    except (ControlRefused, ValueError, OSError) as e:
+        return {"refused": str(e), "sent": False}
+    return {"ok": r.ok, "action": r.action, "channel": r.channel, "response": r.response,
+            "before": r.before, "after": r.after, "sent_bytes": r.sent_hex,
+            "note": None if r.ok else "Not confirmed on the live feed: ask the user to check the GUI."}
+
+
 def main() -> None:
-    global _live
+    global _live, _ctl
     if LIVE_ENABLED:
         _live = LiveFeed(log_dir=os.environ.get("BTSMON_LOG_DIR", os.path.join(os.getcwd(), "logs"))).start()
+        _ctl = Controller(_live)
     try:
         server.run("stdio")
     finally:

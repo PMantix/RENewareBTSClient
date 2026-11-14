@@ -23,7 +23,7 @@ Reads the server's live `.ndc` files with full file sharing; sends nothing to th
 server, cyclers or database. State per channel: running / finished / stopped / protect
 (with the protection reason from Neware's log codes).
 
-## MCP server (read-only)
+## MCP server
 
 `btsmon.mcp_server` exposes the monitor to AI agents over stdio. While it runs it also
 holds one read-only connection to BtsServer (`btsmon.live`: login, heartbeat, device
@@ -40,6 +40,19 @@ Claude Code in `.mcp.json`; start Claude Code in this folder and approve the
 | `get_channel_data(channel, last_hours, max_points)` | recent V/I points (downsampled) |
 | `explain_log_code(code)` | Neware log/protection code text and severity |
 | `get_system_status()` | live-feed health, server version, devices with IP and hardware current/voltage ranges |
+| `list_control_channels()` | channels released for control (allowlist) with live state, and the actions |
+| `prepare_channel_command(channel, action, step)` | **sends nothing**: checks allowlist + live state, returns summary, exact bytes and a 60 s one-time token |
+| `execute_channel_command(token)` | **controls hardware**: re-checks, sends, verifies on the live feed |
+
+### Controls (pause / resume / jump / clear)
+
+Verified live on 62-1-1 (reports from 2026-11-13). Guards: the channel must be in
+`config/test_channels.json` (edit by hand; the agent cannot add channels), the live feed
+must show it in a state that allows the action, and execution needs a token from
+`prepare_channel_command`. `execute_channel_command` is marked destructive, so Claude Code
+asks for permission each time; do not add it to an allow rule. Every command is logged to
+`logs/control_*.log`. Starting tests is not supported yet. CLI equivalent:
+`.venv\Scripts\python tools/control_test.py pause|resume|clear 62-1-1` or `jump 62-1-1 <step>`.
 
 Live feed on its own: `.venv\Scripts\python -m btsmon.live --seconds 20`.
 
