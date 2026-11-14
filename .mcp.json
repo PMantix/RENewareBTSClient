@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "neware-bts-monitor": {
-      "command": ".venv\Scripts\python.exe",
+      "command": ".venv/Scripts/python.exe",
       "args": ["-m", "btsmon.mcp_server"]
     }
   }
