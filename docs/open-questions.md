@@ -35,7 +35,28 @@ types are attached; decides legacy vs Plus code path), P8 (step encoder for star
 P3 (whether login needs credentials). Most can be answered from one passive look at the
 device list, or from the PDBs.
 
-## Q4 (open): does BtsServer allow a second client connection safely?
+## Q4 (open, evidence gathered 2026-11-13): does BtsServer allow a second client connection safely?
+
+Evidence so far (no connection made):
+- Observed: server network log (`BTSServer80\bin\Log\Networt*.log`, 3 days kept) shows
+  a connection from 127.0.0.1 accepted and closed cleanly every 30 s, ~2,880 per day
+  (probably the BtsServerGuard watchdog), while the GUI stays connected and the tests run.
+  4 abrupt client disconnects today (`Reactor_Error`, IOCP error) caused no visible effect.
+- Inferred from `BtsServer.pdb` symbols: IOCP reactor (`CManager`, `CCompletionPort`);
+  every socket starts as a `COnlineLogin` with a login timeout (`CheckOnlineLoginOnTime`)
+  until `BtsCmd_Connect`; clients are kept in lists and served by broadcast
+  (`OnRegClient`, `DelClient`, `LookForAllClientBgs`, `SendAllClientRtData`,
+  `SendAllClient_Resp`); there are inter-client channel locks (`CClient800::OnCmdChlLock`,
+  `OnCmdChlLockRequest`) and per-user permissions (popedom: `POPEDOM_CAHNNEL_READ`,
+  `POPEDOM_CAHNNEL_EXECUTE`). This is a multi-client design.
+- Not yet proven: that client sessions are keyed by socket and not by IP (if keyed by IP,
+  a second session from 127.0.0.1 could replace the GUI's session). Settling it needs a
+  disassembly of `CManager::OnRegClient` / `LookForClientBgs`. Tried: capstone/pdbparse
+  don't work on this PC's 32-bit Python; a self-contained 64-bit Python or Ghidra is
+  needed (user decision). Alternative: make the first live test from another PC on the LAN
+  (different IP), which sidesteps the IP question entirely.
+
+## Q4-old (superseded): does BtsServer allow a second client connection safely?
 BTS.exe already holds two connections to 8001. A third client (ours) must not disrupt the
 GUI's session or the cyclers. Check the server's client handling in `BtsServer.dll` (PDB)
 before connecting. Blocks Phase 1 via 8001 and options 2b/2c.
