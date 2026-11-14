@@ -206,6 +206,15 @@ def main(argv=None) -> int:
                 text, safe = describe(f)
                 emit("RX", text, safe)
     finally:
+        # Graceful half-close so the server sees an orderly FIN before we drop the socket
+        # (an abrupt close made BtsServer log SessionDisconnect error 10038).
+        try:
+            sock.shutdown(socket.SHUT_WR)
+            end = time.monotonic() + 1.0
+            while time.monotonic() < end and sock.recv(65536):
+                pass
+        except OSError:
+            pass
         sock.close()
         emit("--", f"closed; log at {logpath}", b"")
         log.close()
