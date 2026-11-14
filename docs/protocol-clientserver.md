@@ -348,7 +348,7 @@ to the same Channel fields, so legacy raw units are probably **volt 0.1 mV, curr
 - **P6** Whether the C++ server tolerates proto3-style omission of zero fields. Safest is to emit explicitly set zeros like the C# client.
 - **P7** `ProtocSendChlCtrl.CtrlType` values. The reserve-pause details (`ReservePause.Action`).
 - **P8** Step encoders (`ProtoStep.Encode`, `StepItem.Encode/EncodeF`) are large and not documented here. Also unknown: whether the server can start from a step GUID it already holds (`IsExist` in TRespStartInfo suggests the device caches steps by GUID, but the client still sends the step data).
-- **P9** Which devTypes are actually attached to this server. The answer decides between the legacy/struct, legacy-proto (82-84) and Plus (85) paths. Read it from the first device-list response.
+- **P9** (answered 2026-11-13: devType 25 = BTS83 only, devIDs 35 and 62; see findings F-SYS-6) Which devTypes are actually attached to this server. The answer decides between the legacy/struct, legacy-proto (82-84) and Plus (85) paths. Read it from the first device-list response.
 - **P10** Exact meaning of `Stop` with `unitID=253` (whole-device stop that excludes paused channels?) (`Client.cs:8713-8720`).
 
 ---

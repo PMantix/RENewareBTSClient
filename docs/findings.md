@@ -18,8 +18,19 @@ Citations are relative to `vendor/decompiled/` unless a full path is given.
 - F-SYS-4 Observed: client user config in `C:\Users\user\Documents\NEWARE\BTSClient\`
   (`BTS.ini`, `BTSAuto.ini`, `SysConfigParam.iconf` ...). `SysConfigParam.iconf` has
   `PortTCP=0`, `PortUDP=0`.
+- F-SYS-6 Observed (user + NdcFile names, 2026-11-13): hardware is BT-4008 and CT-4008
+  cyclers behind two middle machines (192.168.1.35, 192.168.0.2). All recent data files
+  carry dev_uid 250035 or 250062, i.e. **devType 25 = BTS83**, devIDs 35 and 62
+  (dev_uid = devType*10000 + devID, `Common/common/DevType.cs`). Which IP is which devID is
+  not yet known (server logs don't say; the device-list reply will).
+  Consequence: we use the **legacy-proto path (BTS82-84)**: RT data 0x80D4 with RTData83
+  (float volt/curr), GetDeviceInfo via Plus 0x0201 (DevInfo83), Jump 0x00EC
+  (ProtocJump83), Start via CmdStart83 (0x00D1 step chunks of <=3500 B with
+  `Step.EncodeBts80`/`StepItem.EncodeF`, then 0x00EB ProtocStart83). See
+  `docs/protocol-clientserver.md` §3-4.
 - F-SYS-5 Observed: the GUI refers to channels like `CHANNEL-127.0.0.1-25-35-4-8-671`
-  (`BTSAuto.ini` DaCookie); the meaning of each field is to be confirmed.
+  (`BTSAuto.ini` DaCookie). Inferred: server IP, devType 25, devID 35, unit 4, channel 8,
+  test id 671. NDC file names use the same `<devuid>_<unit>_<chl>_<testid>` order.
 
 ## Data at rest (passive monitoring candidates)
 
