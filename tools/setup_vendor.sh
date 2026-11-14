@@ -34,3 +34,9 @@ done
 # Recover .proto schemas from descriptors embedded in the decompiled Proto sources
 mkdir -p "$V/protos"
 python -I "$R/tools/dump_protos.py" "$V/decompiled/Proto" "$V/protos" && echo "ok   protos -> vendor/protos"
+
+# Optional native RE tools (needs network): self-contained 64-bit Python + capstone in
+# vendor/tools/py64, used by tools/disasm.py and tools/pdb_publics.py.
+#   curl -sSL -o py.zip https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip
+#   unzip into vendor/tools/py64, enable "import site" in python312._pth, run get-pip.py,
+#   then: vendor/tools/py64/python.exe -m pip install capstone pefile

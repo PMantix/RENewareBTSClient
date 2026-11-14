@@ -122,4 +122,21 @@ Citations are relative to `vendor/decompiled/` unless a full path is given.
   Jump 0x0070 / 0x00EC / Plus 0x020A. "Pause" from the GUI is a Stop that Continue can
   resume. Start is a multi-packet transaction keyed by a GUID; the step XML is re-encoded
   (`ProtoStep.Encode` or `Step.EncodeBts80`), never sent as-is.
+- F-CS-7 Inferred (disassembly of `BtsServer.dll` 8.0.1.437 with `tools/disasm.py` +
+  PDB publics from `tools/pdb_publics.py`, 2026-11-13): client registration is keyed by
+  connection ID, not IP.
+  - Signatures: `CManager::OnConnect(DWORD conn, char* ip, int port)`,
+    `RegisterOnlineLogin(DWORD, char*, int)`, `OnRegClient(DWORD conn, std::string& ip,
+    CBuffer*, u16 ver)`, `LookForClientBgs(DWORD)`, `UnRegisterClientBgs(DWORD, int)`,
+    `OnDisconnect(DWORD, int)`.
+  - `OnRegClient` (RVA 0x294660): erases the pending-login entry for *this* conn
+    (map `this+0x168` keyed by conn, 0x2947BF); if `(ver & 0xFE00) == 0 && ver != 1`
+    (old client) it does `inet_addr(ip)` (0x2947FB, the only IP use besides a log line),
+    rate-limits a log message per IP for 60 s (map `this+0x1B0`) and rejects only that
+    login (`UnRegisterOnlineLogin(conn)`, 0x294B4B). Otherwise it creates
+    `CClient800(conn, ip, ver)` (0x294B76) and inserts it into the client map keyed by conn
+    (0x294D1E/0x294D50), then `SendSvrVerToClient`. No `DelClient`, no lookup of
+    existing clients by IP.
+  - Observed: a 127.0.0.1 connection is accepted and closed every 30 s all day
+    (`Networt*.log`) without affecting the GUI or tests.
 - Full detail with citations: `docs/protocol-clientserver.md` (its questions are P1-P10).

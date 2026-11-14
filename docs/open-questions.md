@@ -35,7 +35,16 @@ types are attached; decides legacy vs Plus code path), P8 (step encoder for star
 P3 (whether login needs credentials). Most can be answered from one passive look at the
 device list, or from the PDBs.
 
-## Q4 (open, evidence gathered 2026-11-13): does BtsServer allow a second client connection safely?
+## Q4 (answered 2026-11-13, Inferred from disassembly): does BtsServer allow a second client connection safely?
+
+**Answer: yes at registration level.** Client sessions are keyed by the server's
+per-connection ID, not by IP, so a second client from 127.0.0.1 does not replace or evict
+the GUI's session. See findings F-CS-7 for the disassembly. Remaining risk is in what a
+client *does* after login (control commands, channel locks), not in connecting.
+Condition: our login must carry a valid client version (bits in 0xFE00 set, e.g. 0x0201);
+otherwise the server rejects *our* login only.
+
+Earlier evidence:
 
 Evidence so far (no connection made):
 - Observed: server network log (`BTSServer80\bin\Log\Networt*.log`, 3 days kept) shows
