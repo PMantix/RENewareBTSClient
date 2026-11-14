@@ -21,8 +21,7 @@ Citations are relative to `vendor/decompiled/` unless a full path is given.
 - F-SYS-6 Observed (user + NdcFile names, 2026-11-13): hardware is BT-4008 and CT-4008
   cyclers behind two middle machines (192.168.1.35, 192.168.0.2). All recent data files
   carry dev_uid 250035 or 250062, i.e. **devType 25 = BTS83**, devIDs 35 and 62
-  (dev_uid = devType*10000 + devID, `Common/common/DevType.cs`). Which IP is which devID is
-  not yet known (server logs don't say; the device-list reply will).
+  (dev_uid = devType*10000 + devID, `Common/common/DevType.cs`). DevID 35 = 192.168.1.35, DevID 62 = 192.168.0.2 (F-CS-9).
   Consequence: we use the **legacy-proto path (BTS82-84)**: RT data 0x80D4 with RTData83
   (float volt/curr), GetDeviceInfo via Plus 0x0201 (DevInfo83), Jump 0x00EC
   (ProtocJump83), Start via CmdStart83 (0x00D1 step chunks of <=3500 B with
@@ -147,4 +146,14 @@ Citations are relative to `vendor/decompiled/` unless a full path is given.
   get-device-list 0x021B -> 0x821B work as documented; Plus responses have byte 12 = 0xFF.
   Devices: devType 25, DevIDs 35 and 62, online, version 283. GUI, middle machines and all
   15 running channels unaffected. Server logs a benign error 10038 when we close abruptly.
+- F-CS-9 **Observed** (2026-11-13, `captures/2026-11-13/probe_devices.log`, report
+  `reports/2026-11-13-device-info-and-subscribe.md`): DevID 35 = 192.168.1.35,
+  DevID 62 = 192.168.0.2 (Plus GetDeviceInfo 0x0201 -> 0x8201 `IP`, `DevInfo83` ~1.8 kB).
+  GetDeviceInfo triggers a one-shot RT snapshot of the device; Plus SelectDev 0x021F
+  (empty proto) starts 0x80D4 RTData83 frames for every unit of that device every 2.0 s.
+  RTData83 units: Volt = V*1e4, Curr = mA, CCap/DCCap = mAs, TestTime = step time ms,
+  StepType = NDC step-type codes, PrtCode = log code. WorkType 16 = running, 32 = stopped,
+  0 = idle. Other pushes: 0x80E4 every 5 s (unit 0xFE), 0x80BF. No effect on the GUI or
+  the 15 running channels. BtsServer logs `SessionDisconnect error 10038` whenever any
+  client leaves (benign).
 - Full detail with citations: `docs/protocol-clientserver.md` (its questions are P1-P10).
