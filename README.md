@@ -20,4 +20,20 @@ Rebuild the local (git-ignored) `vendor/` folder with `bash tools/setup_vendor.s
 .venv\Scripts\python -m btsmon.monitor --json --watch 60
 ```
 Reads the server's live `.ndc` files with full file sharing; sends nothing to the
-server, cyclers or database.
+server, cyclers or database. State per channel: running / finished / stopped / protect
+(with the protection reason from Neware's log codes).
+
+## MCP server (read-only)
+
+`btsmon.mcp_server` exposes the monitor to AI agents over stdio. It is registered for
+Claude Code in `.mcp.json`; start Claude Code in this folder and approve the
+`neware-bts-monitor` server. Tools:
+
+| Tool | What it returns |
+|---|---|
+| `list_channels(only_running)` | every channel: state, V, mA, step, capacity, data age |
+| `get_channel(channel, events)` | one channel in detail: executed steps, recent log events |
+| `get_channel_data(channel, last_hours, max_points)` | recent V/I points (downsampled) |
+| `explain_log_code(code)` | Neware log/protection code text and severity |
+
+Setup: `python -m venv .venv` then `.venv\Scripts\pip install -e .[test,mcp]`.

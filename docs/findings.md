@@ -65,6 +65,21 @@ Citations are relative to `vendor/decompiled/` unless a full path is given.
   finished, was stopped or hit a protection (maybe in `_log.ndc`); a channel whose file
   stopped growing is only "not live".
 
+- F-DATA-8 Observed (2026-11-13): `_log.ndc` (filetype 9, v11) = event log. 4096 B pages,
+  132 B page header, 45 records of 88 B (3960 B). Record: `0` u8 0xAA, `1` u32 seq
+  (gaps occur), `9` u8 step no, `11` u8 step type, `17` u32 step time ms, `25` f32 V*1e4,
+  `29` f32 mA, `33` u16 log code, `69` u16 year + u8 month/day/hour/min/sec (device clock),
+  `80` u32 data index. Other bytes not decoded. Log codes map to `LogCode.csv` in the client
+  install (UTF-16; columns code, name, ..., event text (en) col 6, lamp col 7:
+  -1 record, 0 tip, 1 warning, 2-4 error).
+  Checked on four ended tests, matching their history: 62-4-2 `0x1B6` cut-off V jump ->
+  `0x1B2` time jump -> `0x1 Finish` on the End step -> `0x285` status changed;
+  62-4-6 `0x238` into CV -> `0x2 Stop`; 62-4-7 `0x186` "CC, exceeding voltage limit"
+  (lamp 2) at 4.3603 V -> later `0xE4` user clear channel; 35-5-3 Finish.
+  End state rule (`btsmon/logcodes.py`): last event ignoring 0x285/0xE4: Finish ->
+  finished, Stop -> stopped, lamp >= 1 -> protect (+ reason), else unknown.
+- F-DATA-9 Observed: 35-4-x tests record at 1 s intervals, 62-x-x at 10 s.
+
 ## XML API (see docs/api-xml-protocol.md)
 
 - F-API-1 Inferred: `BTSAPI.dll` implements an XML-over-TCP API (default port 502,

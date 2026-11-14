@@ -70,7 +70,7 @@ Cyclers source/sink amps into real cells, often unattended for days.
 | Phase | What | Status |
 |---|---|---|
 | 0 | Static RE: decompile client, document XML API + client/server protocol | done |
-| 1 | Read-only monitoring: `btsmon.monitor` from live NDC files (done); finished/stopped/protect state still missing | partly done |
+| 1 | Read-only monitoring: `btsmon.monitor` + MCP server `btsmon.mcp_server` from live NDC files, incl. finished/stopped/protect from `_log.ndc` | done |
 | 2 | Transport for control. Candidates: (a) Neware XML API, needs registration code from Neware; (b) host Neware's own `Network.dll` `Client` class from our process (pythonnet/C#); (c) our own Python implementation of the 8001 protocol | todo |
 | 3 | Control on a free test channel with dummy load: start/stop/pause/continue/goto | todo |
 | 4 | Python driver + MCP server with guardrails (channel allowlist, limits, audit log) | todo |

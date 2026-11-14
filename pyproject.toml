@@ -5,8 +5,13 @@ description = "AI-agent monitoring and control of Neware BTS cyclers (reverse-en
 requires-python = ">=3.10"
 dependencies = []
 
+[project.scripts]
+btsmon = "btsmon.monitor:main"
+btsmon-mcp = "btsmon.mcp_server:main"
+
 [project.optional-dependencies]
 test = ["pytest"]
+mcp = ["mcp>=2.3"]
 
 [tool.setuptools]
 packages = ["btsmon"]
