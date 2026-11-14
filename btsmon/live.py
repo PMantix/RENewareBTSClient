@@ -226,6 +226,11 @@ class LiveFeed:
                         "current_ranges_ma": xwj[0].get("CurrRange") if xwj else None,
                         "voltage_range_v": xwj[0].get("VolRange") if xwj else None,
                         "chl_ranges": chl_ranges,
+                        "chl_map": {f"{cm.get('UnitID')}-{cm.get('ChlID')}": {
+                            "real_chl": cm.get("RealChlID"), "aux_id": cm.get("AuxID")}
+                            for cm in di.get("ChlMap", [])},
+                        # Device.ListZwjFunc: capability bits, EnumZwjVer.VerN = bit N-1
+                        "zwj_func": [v & 0xFF for v in di.get("ZwjFunc", [])],
                     })
             return
         # other pushes (0x80E4 status, 0x80BF, ...): log once in a while only

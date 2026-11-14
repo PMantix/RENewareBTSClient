@@ -8,7 +8,7 @@ order, before anything is sent:
 Each command uses its own short session (login, command, graceful close) so the
 long-running live feed stays read-only. Everything is logged to logs/control_*.log.
 
-Start is NOT here: it needs the step encoder and is not verified yet.
+Start is in btsmon/start.py (multi-packet transaction; built from code, not yet verified live).
 """
 from __future__ import annotations
 

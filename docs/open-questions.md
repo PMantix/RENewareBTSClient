@@ -69,3 +69,10 @@ Evidence so far (no connection made):
 BTS.exe already holds two connections to 8001. A third client (ours) must not disrupt the
 GUI's session or the cyclers. Check the server's client handling in `BtsServer.dll` (PDB)
 before connecting. Blocks Phase 1 via 8001 and options 2b/2c.
+
+## Q6 (open): first live start (btsmon/start.py)
+Packets are built from decompiled code (F-START-5). To confirm on the first start, ideally
+with a RawCap capture of a GUI start for comparison: (a) StartChlInfo/UnitChlInfo.ChlID is
+the channel mask, not the number (identical for channel 1, so 62-1-1 cannot tell them
+apart); (b) reply layouts for map/barcode; (c) whether skipping the GUI's MySQL XML-info
+update after start (F-START-6) changes how the GUI shows the test.

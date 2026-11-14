@@ -235,3 +235,31 @@ Citations are relative to `vendor/decompiled/` unless a full path is given.
   ProtocStart83) -> reply result 0 -> StartConfirm (0x00E3 ProtocStartConfirm). Whole
   sequence ~90 ms. Byte layouts of the Map/Barcode/GlobalPrt packets still to be
   confirmed with a capture.
+- F-START-1 Observed (StartInfo logs, 57 starts on devs 35 and 62): every start carries the
+  same step-global record (type 254, step 65535): maps 80000000 80000000 00000010, data
+  `05 64000000` = StepGlobalPrt map3 bit 4 CVContinueCutoffDelay, length byte 5 + u32 100,
+  from SysConfigParam [sysSet] IsCVContinueCutoffDelay=True / CVContinueCutoffDelay=100
+  (Step.MergeSysSetStepGlobalPrt, Step.cs:3505; StepGlobalPrt.Encode, StepGlobalPrt.cs:374).
+  On the wire a CRC-32 (zlib) over maps+data follows (Crc32.cs); the log omits it.
+- F-START-2 Observed (live device info, read-only, 2026-11-14): ZwjFunc dev 35 =
+  ff ff ff 00 01, dev 62 = ff ff 7f. Device.EnableVer(VerN) = bit N-1 (Device.cs:5792,
+  Client.cs:1057). Both have Ver1 (step remark), Ver8 (PrtWhenPanErr), Ver16 (global
+  protection), Ver18 (C-rate); neither has Ver34 (capacity retention), which is why
+  CapRetentionRateCycle=5 never shows in the logs.
+- F-START-3 Inferred (SysGlobalPrt.Encode, SysGlobalPrt.cs:412; settings
+  Documents/NEWARE/BTSClient/SysGlobalPrt.iconf, GlobalPrtApplyToAll=True): with this PC's
+  settings the GlobalPrt DataBuf is `u32 0x400, u8 PrtWhenPanErr=0, u32 CRC-32` on both
+  devices.
+- F-START-4 Observed (BTSClient20261113.log + StartInfo h_test row, test 141 on 62-1-1):
+  map `1-1-0-0` (unit, chl, aux, real chl 0); barcode/start fields: step_name =
+  file name, test_name empty, batch_no = Sn = TestSn = start time `yyyy-MM-dd HH-mm-ss`,
+  creator/remark/barcode empty, battery mass 0, start step 1.
+- F-START-5 Inferred (Client.SendStart83 / CmdStart82.SetStep / CmdStart80.SetRemark /
+  CmdStart76.SetBarcodeCmd / CmdStart83): full packet layouts, see
+  docs/protocol-clientserver.md 3.4; ported in `btsmon/start.py`, tested offline against
+  a fake server (tests/test_start.py). Not yet seen on the wire.
+- F-START-6 Inferred (Client.OnRespStart83, Client.cs): after a successful start the GUI
+  also writes the test's XML info to MySQL (MySql.UpdateXmlInfo) and sets up auto-backup.
+  We do neither (MySQL is read-only for us); effect on the GUI's view of that test to be
+  checked on the first live start.
+

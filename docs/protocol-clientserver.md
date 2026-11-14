@@ -278,6 +278,25 @@ many stages are skipped when empty):
   BTS80-82 → 0x00BD `PacketSendStart80` struct → 0x80BD (`CmdStart80.cs:540`).
 - **Confirm:** 0x00E3 `ProtocStartConfirm{DevType,DevID,UnitID,4:repeated ConfirmTest{UnitID,ChlID,TestID},5:Guid}` → 0x80E3 (`CmdStart83.cs:80-98`).
 
+**BTS83 single-channel start as ported in `btsmon/start.py`** (Inferred from code; stage order and logged
+contents Observed, F-START-1..6). Frame header bytes 8/9 = DevID/UnitID (PacketProto takes them from the proto;
+UnitID 0 when the proto has none). `mask` = 1 << (chl-1) (`Client.GetStartChl`); StartChlInfo/UnitChlInfo.ChlID
+carry this mask, Barcode.ChlID and RemarkChl.chlInfo.ChlID carry the channel number.
+
+| # | Stage | Request body after `FE cmdEx` | Reply |
+|---|---|---|---|
+| 1 | Map 0x0076 (PacketSendChlMap70) | `devType u8, guid[16], u16 n, n x (unit, chl, auxChl, realChl)` | 0x8076: result @13, devType, guid |
+| 2 | Barcode 0x00D6 (PacketSendBarcode760, unit byte 0) | `devType u8, flag u8 (1 more / 0 last), u32 index, u32 n, ProtocBarcode bytes (<= 4000 per packet)` | 0x80D6: devType, flag, index, n, ProtocBarcodeResp |
+| 3 | Remark 0x00C6 | `u32 n, ProtocRemark{1,2,3,4 StartChlInfo,5 Remark(ANSI),6 Guid,7 RemarkChl{1 chlInfo,2 Remark}}` | 0x80C6 PacketProto |
+| 4 | Step 0x00D1 (1+ chunks) | ProtocSetStep82, see above | 0x80D1 per chunk |
+| 5 | StepGlobal 0x00F0 (if Device Ver16 and a setting is set) | `ProtocSetStepGlobal{..., 5 StepBuf = u32 maps + data + CRC-32, 6 Guid}` | 0x80F0 |
+| 6 | GlobalPrt 0x00D7 (unit byte 0) | `ProtocSetGrobalProtect82{1,2,4 DataBuf = u32 map + values + CRC-32}` | 0x80D7 |
+| 7 | Start 0x00EB | ProtocStart83 | 0x80EB, test ids in field 5 |
+| 8 | Confirm 0x00E3 | ProtocStartConfirm with the test ids from 7 | 0x80E3 |
+
+CRC-32 = standard (zlib) CRC over the little-endian maps and the data (`Common/common/Crc32.cs`).
+Reply frames: `FE, result u8 @13, cmdEx u16 @14`, PacketProto replies then `u32 n @16, proto @20` (Result = field 4).
+
 **Step file → model:** the GUI loads the `.xml` step file (format: `vendor/config/DefaultStep.xml`, `<root><config type="Step File" version="18" … Guid=…><Head_Info>…<Step_Info Num=N><StepK Step_ID Step_Type>…`)
 with `Common/common/XmlStep.cs` into `Common.Step`. It then encodes that model with `ProtoStep.Encode` (Plus) or `Step.EncodeBts80` (legacy).
 **The XML file is never sent as-is.** A Python client has to port one of these encoders (P8).
