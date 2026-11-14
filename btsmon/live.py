@@ -206,6 +206,17 @@ class LiveFeed:
                 info = P.decode(data, P.RESP_GET_DEVICE_INFO)
                 di = info.get("DeviceInfo83", {})
                 xwj = di.get("XwjInfo", [])
+                # per-channel current ranges as the GUI assigns them (Client.cs:1153-1159):
+                # XwjInfo keyed by XwjNo = RealChlID / 8 + 1; parallel channels flagged
+                by_no = {x.get("XwjNo"): x for x in xwj}
+                paral = {(p.get("UnitID"), p.get("ChlID")) for p in di.get("ParalInfo", [])}
+                chl_ranges = {}
+                for cm in di.get("ChlMap", []):
+                    x = by_no.get((cm.get("RealChlID") or 0) // 8 + 1)
+                    if x is not None:
+                        chl_ranges[f"{cm.get('UnitID')}-{cm.get('ChlID')}"] = {
+                            "chg_range_ma": x.get("ChgRange"), "ranges_ma": list(x.get("CurrRange") or []),
+                            "parallel": (cm.get("UnitID"), cm.get("ChlID")) in paral}
                 with self._lock:
                     self.devices.setdefault(f.dev_id, {}).update({
                         "ip": info.get("IP"), "sn": di.get("SN"), "zwj_soft": di.get("SoftVersion"),
@@ -214,6 +225,7 @@ class LiveFeed:
                         "max_current_ma": max((x.get("ChgRange", 0) for x in xwj), default=None),
                         "current_ranges_ma": xwj[0].get("CurrRange") if xwj else None,
                         "voltage_range_v": xwj[0].get("VolRange") if xwj else None,
+                        "chl_ranges": chl_ranges,
                     })
             return
         # other pushes (0x80E4 status, 0x80BF, ...): log once in a while only

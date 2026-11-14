@@ -1,0 +1,628 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <config type="Step File" version="18" client_version="BTS Client 8.0.1.492(2025.01.23)(R3)" date="20261111145951" Guid="1797c689-f038-4b03-8adf-1091e5e587ca">
+    <Head_Info>
+      <Operate Value="66" />
+      <Scale Value="1" />
+      <Start_Step Value="1" Hide_Ctrl_Step="0" />
+      <Remark Value="PR6 HRC: 10 min rest + modes 4-8 +1.5C/1.8C, cap 27.021 mAh" />
+      <RateType Value="105" />
+      <MultCap Value="97275.6" />
+    </Head_Info>
+    <Whole_Prt>
+      <Protect>
+        <Main>
+          <Volt>
+            <Upper Value="43500" />
+            <Lower Value="20000" />
+          </Volt>
+        </Main>
+      </Protect>
+      <Record>
+        <Main>
+          <Time Value="10000" />
+          <Volt Value="100" />
+        </Main>
+      </Record>
+    </Whole_Prt>
+    <Step_Info Num="30">
+      <Step1 Step_ID="1" Step_Type="4">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Time Value="600000" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Rest 10 min, then 0.2C (all 0.05C cycles removed)" />
+          </Main>
+        </Protect>
+      </Step1>
+      <Step2 Step_ID="2" Step_Type="7">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Curr Value="5.4042" />
+            <Rate Value="0.2" />
+            <Volt Value="43000" />
+            <Time Value="108000000" />
+            <Cap Value="166757.999976" />
+            <Stop_Curr Value="0.1486" />
+            <Stop_Rate Value="0.0055" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 4: 0.2C CCCV charge to 4.3 V, cutoff 0.0055C" />
+          </Main>
+        </Protect>
+      </Step2>
+      <Step3 Step_ID="3" Step_Type="4">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Time Value="1800000" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 4: rest 30 min" />
+          </Main>
+        </Protect>
+      </Step3>
+      <Step4 Step_ID="4" Step_Type="2">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Curr Value="5.4042" />
+            <Rate Value="0.2" />
+            <Time Value="108000000" />
+            <Cap Value="166757.999976" />
+            <Stop_Volt Value="27000" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 4: 0.2C CC discharge to 2.7 V" />
+          </Main>
+        </Protect>
+      </Step4>
+      <Step5 Step_ID="5" Step_Type="4">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Time Value="1800000" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 4: rest 30 min" />
+          </Main>
+        </Protect>
+      </Step5>
+      <Step6 Step_ID="6" Step_Type="7">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Curr Value="13.5105" />
+            <Rate Value="0.5" />
+            <Volt Value="43000" />
+            <Time Value="108000000" />
+            <Cap Value="166757.999976" />
+            <Stop_Curr Value="0.1486" />
+            <Stop_Rate Value="0.0055" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 5: 0.5C CCCV charge to 4.3 V, cutoff 0.0055C" />
+          </Main>
+        </Protect>
+      </Step6>
+      <Step7 Step_ID="7" Step_Type="4">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Time Value="1800000" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 5: rest 30 min" />
+          </Main>
+        </Protect>
+      </Step7>
+      <Step8 Step_ID="8" Step_Type="2">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Curr Value="13.5105" />
+            <Rate Value="0.5" />
+            <Time Value="108000000" />
+            <Cap Value="166757.999976" />
+            <Stop_Volt Value="27000" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 5: 0.5C CC discharge to 2.7 V" />
+          </Main>
+        </Protect>
+      </Step8>
+      <Step9 Step_ID="9" Step_Type="4">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Time Value="1800000" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 5: rest 30 min" />
+          </Main>
+        </Protect>
+      </Step9>
+      <Step10 Step_ID="10" Step_Type="7">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Curr Value="18.9147" />
+            <Rate Value="0.7" />
+            <Volt Value="43000" />
+            <Time Value="108000000" />
+            <Cap Value="166757.999976" />
+            <Stop_Curr Value="0.1486" />
+            <Stop_Rate Value="0.0055" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 6: 0.7C CCCV charge to 4.3 V, cutoff 0.0055C" />
+          </Main>
+        </Protect>
+      </Step10>
+      <Step11 Step_ID="11" Step_Type="4">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Time Value="1800000" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 6: rest 30 min" />
+          </Main>
+        </Protect>
+      </Step11>
+      <Step12 Step_ID="12" Step_Type="2">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Curr Value="18.9147" />
+            <Rate Value="0.7" />
+            <Time Value="108000000" />
+            <Cap Value="166757.999976" />
+            <Stop_Volt Value="27000" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 6: 0.7C CC discharge to 2.7 V" />
+          </Main>
+        </Protect>
+      </Step12>
+      <Step13 Step_ID="13" Step_Type="4">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Time Value="1800000" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 6: rest 30 min" />
+          </Main>
+        </Protect>
+      </Step13>
+      <Step14 Step_ID="14" Step_Type="7">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Curr Value="27.021" />
+            <Rate Value="1" />
+            <Volt Value="43000" />
+            <Time Value="108000000" />
+            <Cap Value="166757.999976" />
+            <Stop_Curr Value="0.1486" />
+            <Stop_Rate Value="0.0055" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 7: 1C CCCV charge to 4.3 V, cutoff 0.0055C" />
+          </Main>
+        </Protect>
+      </Step14>
+      <Step15 Step_ID="15" Step_Type="4">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Time Value="1800000" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 7: rest 30 min" />
+          </Main>
+        </Protect>
+      </Step15>
+      <Step16 Step_ID="16" Step_Type="2">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Curr Value="27.021" />
+            <Rate Value="1" />
+            <Time Value="108000000" />
+            <Cap Value="166757.999976" />
+            <Stop_Volt Value="27000" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 7: 1C CC discharge to 2.7 V" />
+          </Main>
+        </Protect>
+      </Step16>
+      <Step17 Step_ID="17" Step_Type="4">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Time Value="1800000" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 7: rest 30 min" />
+          </Main>
+        </Protect>
+      </Step17>
+      <Step18 Step_ID="18" Step_Type="7">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Curr Value="40.5315" />
+            <Rate Value="1.5" />
+            <Volt Value="43000" />
+            <Time Value="108000000" />
+            <Cap Value="166757.999976" />
+            <Stop_Curr Value="0.1486" />
+            <Stop_Rate Value="0.0055" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 8: 1.5C CCCV charge to 4.3 V, cutoff 0.0055C (added, not on slide)" />
+          </Main>
+        </Protect>
+      </Step18>
+      <Step19 Step_ID="19" Step_Type="4">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Time Value="1800000" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 8: rest 30 min" />
+          </Main>
+        </Protect>
+      </Step19>
+      <Step20 Step_ID="20" Step_Type="2">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Curr Value="40.5315" />
+            <Rate Value="1.5" />
+            <Time Value="108000000" />
+            <Cap Value="166757.999976" />
+            <Stop_Volt Value="27000" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 8: 1.5C CC discharge to 2.7 V (added, not on slide)" />
+          </Main>
+        </Protect>
+      </Step20>
+      <Step21 Step_ID="21" Step_Type="4">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Time Value="1800000" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 8: rest 30 min" />
+          </Main>
+        </Protect>
+      </Step21>
+      <Step22 Step_ID="22" Step_Type="7">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Curr Value="48.6378" />
+            <Rate Value="1.8" />
+            <Volt Value="43000" />
+            <Time Value="108000000" />
+            <Cap Value="166757.999976" />
+            <Stop_Curr Value="0.1486" />
+            <Stop_Rate Value="0.0055" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 9: 1.8C CCCV charge to 4.3 V, cutoff 0.0055C (added, not on slide)" />
+          </Main>
+        </Protect>
+      </Step22>
+      <Step23 Step_ID="23" Step_Type="4">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Time Value="1800000" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 9: rest 30 min" />
+          </Main>
+        </Protect>
+      </Step23>
+      <Step24 Step_ID="24" Step_Type="2">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Curr Value="48.6378" />
+            <Rate Value="1.8" />
+            <Time Value="108000000" />
+            <Cap Value="166757.999976" />
+            <Stop_Volt Value="27000" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 9: 1.8C CC discharge to 2.7 V (added, not on slide)" />
+          </Main>
+        </Protect>
+      </Step24>
+      <Step25 Step_ID="25" Step_Type="4">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Time Value="1800000" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 9: rest 30 min" />
+          </Main>
+        </Protect>
+      </Step25>
+      <Step26 Step_ID="26" Step_Type="7">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Curr Value="5.4042" />
+            <Rate Value="0.2" />
+            <Volt Value="43000" />
+            <Time Value="108000000" />
+            <Cap Value="166757.999976" />
+            <Stop_Curr Value="0.1486" />
+            <Stop_Rate Value="0.0055" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 10: 0.2C CCCV charge to 4.3 V, cutoff 0.0055C (recovery check)" />
+          </Main>
+        </Protect>
+      </Step26>
+      <Step27 Step_ID="27" Step_Type="4">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Time Value="1800000" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 10: rest 30 min" />
+          </Main>
+        </Protect>
+      </Step27>
+      <Step28 Step_ID="28" Step_Type="2">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Curr Value="5.4042" />
+            <Rate Value="0.2" />
+            <Time Value="108000000" />
+            <Cap Value="166757.999976" />
+            <Stop_Volt Value="27000" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 10: 0.2C CC discharge to 2.7 V (recovery check)" />
+          </Main>
+        </Protect>
+      </Step28>
+      <Step29 Step_ID="29" Step_Type="4">
+        <Record>
+          <Main>
+            <Time Value="10000" />
+            <Volt Value="100" />
+          </Main>
+        </Record>
+        <Limit>
+          <Main>
+            <Time Value="1800000" />
+          </Main>
+        </Limit>
+        <Protect>
+          <Main>
+            <Remark Value="Mode 10: rest 30 min" />
+          </Main>
+        </Protect>
+      </Step29>
+      <Step30 Step_ID="30" Step_Type="6">
+      </Step30>
+    </Step_Info>
+    <SMBUS>
+      <SMBUS_Info Num="0" AdjacentInterval="0" />
+    </SMBUS>
+  </config>
+</root>

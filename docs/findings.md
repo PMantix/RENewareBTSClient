@@ -205,12 +205,28 @@ Citations are relative to `vendor/decompiled/` unless a full path is given.
   reproduced byte for byte by `btsmon.stepfile.load` + `steps.logged_form` (whole-test
   protect/record merged into non-end steps, Step.MergeSingleWholePrt Step.cs:2996;
   Operate -> param1, RateType -> param2 on every step).
-- F-STEP-4 Inferred: at start the GUI also fills defaults from its system settings that
-  are not in the step file: C-rate steps get current = rate x capacity; with
-  `sysSet.IsCCCVRange` CCCV steps get the smallest current range >= the current
-  (Step.cs:2955-2995); with `bCurrAbsDefault` CC/CCCV steps get prt_curr_abs = range x
-  `dCurrAbsDefault` (Step.cs:1186-1205). Seen in DCR50_PR1_5-1.xml vs test 143 (range
-  25, prt_curr_abs 25.0, recomputed currents). Not ported yet.
+- F-STEP-4 Observed (StartInfo logs vs step files, 6/6 supported GUI starts byte-identical
+  after this) / Inferred (code): the GUI start (StepEdit.MergePrt, Step/Steps/StepEdit.cs:
+  4166-4236) adds defaults from SysConfigParam.iconf [sysSet] and the channel's device
+  info, ported in `btsmon/gui_defaults.py`:
+  - `IsCCCVRange=True`: CCCV chg/dchg and PCCCV steps get curr_range = the smallest
+    channel current range >= limit_curr (Step.SetCCCVRange, Step.cs:2950-2985).
+  - `CurrAbsDefault=100` (%): CC chg, CC dchg and CCCV chg steps without their own value
+    get prt_curr_abs = (step curr_range, else the channel ChgCurrRange) x 100 %
+    (Step.MergeAtlPrt, Step.cs:1127-1205). E.g. dev 62 (ranges 1/25/50 mA, max 50):
+    CCCV 5.4 mA -> range 25, prt_curr_abs 25; CC dchg -> prt_curr_abs 50.
+  - Channel ranges: device info XwjInfo[XwjNo = RealChlID/8+1].ChgRange / CurrRange
+    (Client.cs:1153-1159); now in the live feed as `chl_ranges`. Observed dev 35:
+    1000/6000/12000 mA; dev 62: 1/25/50 mA.
+  - This PC: StartModee=0, PrtWhenSingleStartt=0 (no advanced-protection template),
+    IsSplitCCCV=False, no DefaultMinDuration. `gui_defaults` refuses other values.
+- F-STEP-6 Inferred (StepEdit.GetStep, StepEdit.cs:5983) + Observed (DCR50_PR1-3 vs test
+  143): on Start the GUI rebuilds the steps from its editing grid, not the file, so values
+  go through the grid's display text: currents come back rounded to 4 decimals in mA
+  (.NET `ToString("f4")`, SystemUnit.ToDisplayValueStr / GetRadio), e.g. 1.34445 ->
+  1.3445, 0.14789 -> 0.1479. GetStep also sets Operator = "66". We send the file's
+  exact values instead (difference < 0.00005 mA); the tests apply the rounding only to
+  compare with the logged GUI starts.
 - F-STEP-5 Observed (BTSClient80/LogData/BTSClient20261113.log, test 141 start
   21:30:45): GUI start sequence for one BTS83 channel, each stage sent after the previous
   stage's reply: Map (PacketSendChlMap70) -> Barcode (ProtocBarcode) -> Remark (0x00C6

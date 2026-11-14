@@ -78,7 +78,7 @@ Cyclers source/sink amps into real cells, often unattended for days.
 | 1 | Read-only monitoring: `btsmon.monitor` + MCP server `btsmon.mcp_server` from live NDC files, incl. finished/stopped/protect from `_log.ndc` | done |
 | 1b | Live read-only feed over 8001 (`btsmon.live`, 2 s), used by the MCP server | done |
 | 2 | Transport for control. Candidates: (a) Neware XML API, needs registration code from Neware; (b) host Neware's own `Network.dll` `Client` class from our process (pythonnet/C#); (c) our own Python implementation of the 8001 protocol | todo |
-| 3 | Control on a free test channel: pause/resume, jump, clear flag done on 62-1-1 (F-CS-12, F-CS-13); start: step codec `btsmon/steps.py` + step-file reader `btsmon/stepfile.py` verified vs server logs (F-STEP-1..5), GUI start defaults + transaction todo | in progress |
+| 3 | Control on a free test channel: pause/resume, jump, clear flag done on 62-1-1 (F-CS-12, F-CS-13); start: step codec `btsmon/steps.py` + step-file reader `btsmon/stepfile.py` verified vs server logs (F-STEP-1..5), GUI start defaults `btsmon/gui_defaults.py` (F-STEP-4, -6); start transaction todo | in progress |
 | 4 | MCP server with guardrails: monitoring + live feed done; pause/resume/jump/clear via allowlist + prepare/execute token (`btsmon/control.py`) done; start todo | in progress |
 
 ## Repo conventions
