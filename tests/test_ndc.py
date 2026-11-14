@@ -102,3 +102,62 @@ def test_discover_and_read_state(tmp_path):
     st = read_state(tf)
     assert st.error is None and st.live
     assert st.snapshot["voltage_v"] == pytest.approx(3.7, abs=1e-6)
+
+
+# ---- _log.ndc ----------------------------------------------------------------------
+from btsmon import logcodes  # noqa: E402
+
+
+def make_log_rec(seq, step_no, step_type, code, v=3.5, ma=0.0, step_ms=0, index=1,
+                 when=(2026, 11, 11, 10, 0, 0)):
+    r = bytearray(88)
+    r[0] = 0xAA
+    struct.pack_into("<I", r, 1, seq)
+    r[9], r[11] = step_no, step_type
+    struct.pack_into("<I", r, 17, step_ms)
+    struct.pack_into("<ff", r, 25, v / 1e-4, ma)
+    struct.pack_into("<H", r, 33, code)
+    struct.pack_into("<HBBBBB", r, 69, *when)
+    struct.pack_into("<I", r, 80, index)
+    return bytes(r)
+
+
+def make_log(recs):
+    return _file(9, recs, 88, 4096 - 132 - 3960)
+
+
+CODES = {
+    0x1: logcodes.LogCode(0x1, "LOG_FINISH", "Finish", 0),
+    0x2: logcodes.LogCode(0x2, "LOG_STOP", "Stop", 0),
+    0x186: logcodes.LogCode(0x186, "LOG_CCC_VOL_UP", "CC, exceeding voltage limit.", 2),
+    0x1B2: logcodes.LogCode(0x1B2, "LOG_TIME_LIMIT_CONDITION_JUMP", "Time limit jump", -1),
+    0x285: logcodes.LogCode(0x285, "LOG_CHL_STATUS_CHANGED", "Channel status changed", 0),
+    0xE4: logcodes.LogCode(0xE4, "LOG_USER_CLEAR_CHANNEL", "User clear channel", 0),
+}
+
+
+def test_parse_log_fields():
+    ev = ndc.parse_log(make_log([make_log_rec(7, 38, 1, 0x186, v=4.3603, ma=23.94,
+                                              step_ms=200, index=24219)]))
+    e = ev[0]
+    assert (e.seq, e.step_no, e.step_type, e.code, e.index) == (7, 38, "CC_Chg", 0x186, 24219)
+    assert e.voltage_v == pytest.approx(4.3603, abs=1e-6)
+    assert e.step_time_s == pytest.approx(0.2)
+    assert e.device_time == datetime(2026, 11, 11, 10, 0, 0)
+
+
+def test_parse_log_spans_pages():
+    ev = ndc.parse_log(make_log([make_log_rec(i, 1, 4, 0x1B2) for i in range(1, 100)]))
+    assert [e.seq for e in ev] == list(range(1, 100))
+
+
+@pytest.mark.parametrize("codes,expected", [
+    ([0x1B2, 0x1, 0x285], ("finished", None)),
+    ([0x1B2, 0x2, 0x285], ("stopped", None)),
+    ([0x1B2, 0x186, 0x285, 0xE4, 0x285], ("protect", "0x186 CC, exceeding voltage limit.")),
+    ([0x1B2], ("unknown", "0x1B2 Time limit jump")),
+    ([], ("unknown", None)),
+])
+def test_end_state(codes, expected):
+    events = ndc.parse_log(make_log([make_log_rec(i + 1, 1, 4, c) for i, c in enumerate(codes)])) if codes else []
+    assert logcodes.end_state(events, CODES) == expected

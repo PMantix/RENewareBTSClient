@@ -126,6 +126,54 @@ def parse_steps(buf: bytes) -> list[StepRec]:
     return out
 
 
+# ---- _log.ndc (filetype 9): event log -------------------------------------------------
+# 88-byte records, 45 per page (3960 / 88), each starting with 0xAA. Layout derived from
+# this PC's files (docs/findings.md F-DATA-8):
+#   0 u8 0xAA | 1 u32 seq | 9 u8 step no | 11 u8 step type | 17 u32 step time ms
+#   25 f32 V*1e4 | 29 f32 mA | 33 u16 log code (LogCode.csv) | 69 u16 Y, u8 M D h m s
+#   (device clock) | 80 u32 data index
+LOG_REC = 88
+LOG_CODE_FINISH = 0x1
+LOG_CODE_STOP = 0x2
+LOG_CODE_STATUS_CHANGED = 0x285
+
+
+@dataclass
+class LogEvent:
+    seq: int
+    step_no: int
+    step_type: str
+    step_time_s: float
+    voltage_v: float
+    current_ma: float
+    code: int
+    device_time: datetime | None   # naive, device clock (see F-DATA-6)
+    index: int
+
+
+def parse_log(buf: bytes) -> list[LogEvent]:
+    _check(buf, 9)
+    out: list[LogEvent] = []
+    for page in _pages(buf):
+        body = page[PAGE_HDR:PAGE_HDR + 3960]
+        for i in range(0, len(body) - LOG_REC + 1, LOG_REC):
+            r = body[i:i + LOG_REC]
+            if r[0] != 0xAA:
+                continue
+            seq = struct.unpack_from("<I", r, 1)[0]
+            v, c = struct.unpack_from("<ff", r, 25)
+            y, mo, d, h, mi, s = struct.unpack_from("<HBBBBB", r, 69)
+            try:
+                when = datetime(y, mo, d, h, mi, s)
+            except ValueError:
+                when = None
+            out.append(LogEvent(seq, r[9], STEP_TYPES.get(r[11], f"type{r[11]}"),
+                                struct.unpack_from("<I", r, 17)[0] / 1000,
+                                v * 1e-4, c, struct.unpack_from("<H", r, 33)[0], when,
+                                struct.unpack_from("<I", r, 80)[0]))
+    return out
+
+
 @dataclass
 class Snapshot:
     """Latest known state of one test, built from its three files."""

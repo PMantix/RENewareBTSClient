@@ -18,7 +18,8 @@ import time
 from dataclasses import dataclass, asdict
 from datetime import datetime, timedelta, timezone
 
-from .ndc import NdcFormatError, Snapshot, snapshot
+from . import logcodes
+from .ndc import NdcFormatError, Snapshot, parse_log, snapshot
 from .safe_read import read_shared
 
 DEFAULT_ROOT = r"C:\Program Files (x86)\NEWARE\BTSServer80\NdcFile"
@@ -85,6 +86,9 @@ class ChannelState:
     live: bool               # data file written recently
     snapshot: dict | None
     device_clock_offset_s: float | None
+    state: str = "unknown"   # running / finished / stopped / protect / unknown
+    reason: str | None = None
+    last_events: list | None = None
     error: str | None = None
 
 
@@ -92,22 +96,37 @@ def read_state(tf: TestFiles, live_window_s: float = 900) -> ChannelState:
     age = time.time() - tf.mtime
     err = None
     snap: Snapshot | None = None
+    events = []
     try:
         data = read_shared(tf.path())
         ri = read_shared(tf.path("_runInfo")) if os.path.exists(tf.path("_runInfo")) else None
         st = read_shared(tf.path("_step")) if os.path.exists(tf.path("_step")) else None
         snap = snapshot(data, ri, st)
+        if os.path.exists(tf.path("_log")):
+            events = parse_log(read_shared(tf.path("_log")))
     except (OSError, NdcFormatError, ValueError) as e:
         err = f"{type(e).__name__}: {e}"
+    live = age < live_window_s
+    state, reason = logcodes.end_state(events)
+    if state not in ("finished", "stopped", "protect"):
+        state, reason = ("running", None) if live else ("unknown", reason)
+    elif live and snap and events and max(e.index for e in events) < snap.index:
+        # a terminal event older than the newest data point belongs to an earlier
+        # stop/resume; the channel is running again
+        state, reason = "running", None
+    last_events = [{"seq": e.seq, "time": e.device_time.isoformat(sep=" ") if e.device_time else None,
+                    "step_no": e.step_no, "step_type": e.step_type, "code": e.code,
+                    "event": logcodes.describe(e.code)} for e in events[-5:]]
     offset = None
     if snap and snap.device_time and not snap.extrapolated:
         offset = snap.device_time.timestamp() - tf.mtime
     elif snap and snap.device_time:
         offset = snap.device_time.timestamp() - tf.mtime  # rough when extrapolated
     return ChannelState(tf.channel, tf.dev_type, tf.test_id, tf.stem,
-                        tf.started.isoformat(sep=" "), round(age, 1), age < live_window_s,
+                        tf.started.isoformat(sep=" "), round(age, 1), live,
                         snap.as_dict() if snap else None,
-                        round(offset, 0) if offset is not None else None, err)
+                        round(offset, 0) if offset is not None else None,
+                        state, reason, last_events, err)
 
 
 def scan(root: str = DEFAULT_ROOT, days: int = 60, only_live: bool = False) -> list[ChannelState]:
@@ -120,11 +139,11 @@ def _fmt(v, f):
 
 
 def print_table(states: list[ChannelState]) -> None:
-    print(f"{'channel':<10} {'test':>5} {'live':<4} {'age':>6} {'V':>8} {'mA':>10} "
+    print(f"{'channel':<10} {'test':>5} {'state':<9} {'age':>6} {'V':>8} {'mA':>10} "
           f"{'cyc':>4} {'step':>4} {'type':<10} {'step(h)':>7} {'test(h)':>7} {'Qc mAh':>9} {'Qd mAh':>9}")
     for s in states:
         n = s.snapshot or {}
-        print(f"{s.channel:<10} {s.test_id:>5} {'yes' if s.live else 'no':<4} "
+        print(f"{s.channel:<10} {s.test_id:>5} {s.state:<9} "
               f"{_fmt(s.file_age_s / 60, '5.0f')}m "
               f"{_fmt(n.get('voltage_v'), '8.4f')} {_fmt(n.get('current_ma'), '10.4f')} "
               f"{_fmt(n.get('cycle'), '4d')} {_fmt(n.get('step_no'), '4d')} "
@@ -132,6 +151,7 @@ def print_table(states: list[ChannelState]) -> None:
               f"{_fmt(None if n.get('step_time_s') is None else n['step_time_s'] / 3600, '7.2f')} "
               f"{_fmt(None if n.get('elapsed_s') is None else n['elapsed_s'] / 3600, '7.2f')} "
               f"{_fmt(n.get('charge_mah'), '9.3f')} {_fmt(n.get('discharge_mah'), '9.3f')}"
+              + (f"  {s.reason}" if s.reason and s.state == "protect" else "")
               + (f"  ERROR {s.error}" if s.error else ""))
 
 
