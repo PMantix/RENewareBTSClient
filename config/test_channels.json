@@ -1,0 +1,6 @@
+{
+  "_comment": "Channels the user has released for control-command tests. Control code must refuse any channel not listed. 62-1-1: no cell connected (user, 2026-11-13).",
+  "channels": {
+    "62-1-1": {"dev_type": 25, "dev_id": 62, "unit": 1, "chl": 1, "load": "none (open terminals)", "approved": "2026-11-13"}
+  }
+}
