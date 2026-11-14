@@ -174,4 +174,10 @@ Citations are relative to `vendor/decompiled/` unless a full path is given.
   GUI shows paused, `_log.ndc` records `0x2 Stop`. Continue 0x000D -> 0x800D result 0
   (one extra trailing byte), WorkType 32->16. Body: devType u8 + channel mask u64
   (bit = ChlID-1), header devID/unitID. No other channel affected.
+- F-CS-13 **Observed** (2026-11-13 21:31-21:34, `reports/2026-11-13-jump-pause-clear.md`):
+  on 62-1-1 (no cell, GUI-started 2 x Rest): Jump PacketProto 0x00EC ProtocJump83
+  {DevType, DevID, UnitID, Channel mask, StepID = GUI step number} -> 0x80EC
+  ProtocJump83Resp result 0, step 1 -> 2 with step time reset; server logs `0x4 Jump`.
+  Clear flag legacy 0x0097 {devType u8, mask u64} from stopped -> 0x8097 result 0,
+  WorkType 32 -> 0 (idle); server logs `0xE4 User clear channel`.
 - Full detail with citations: `docs/protocol-clientserver.md` (its questions are P1-P10).

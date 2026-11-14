@@ -1,0 +1,7 @@
+21:34:03.877234 before: {'work_state': 'stopped', 'work_type': 32, 'step_no': 2, 'step_time_s': 118.4, 'voltage_v': 0.44520244140625004, 'current_ma': 0.0, 'age_s': 0.0}
+21:34:03.878073 TX login
+21:34:03.878073 RX login result=0
+21:34:03.878073 TX clear 0x0097 62-1-1: ff ff ff ff ff ff ff ff 3e 01 1a 00 fe 97 00 19 01 00 00 00 00 00 00 00 08 5a
+21:34:03.879586 RX response 0x8097 dev=62 unit=1 result=0 devType=25 mask=0x1: ff ff ff ff ff ff ff ff 3e 01 1b 00 fe 00 97 80 19 01 00 00 00 00 00 00 00 89 5a
+21:34:06.883533 after: {'work_state': 'idle', 'work_type': 0, 'step_no': 2, 'step_time_s': 118.4, 'voltage_v': 0.44517275390625, 'current_ma': 0.0, 'age_s': 0.4}
+21:34:06.883533 RESULT: OK

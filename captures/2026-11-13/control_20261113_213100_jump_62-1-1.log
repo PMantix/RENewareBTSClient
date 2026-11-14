@@ -1,0 +1,7 @@
+21:31:03.828708 before: {'work_state': 'running', 'work_type': 16, 'step_no': 1, 'step_time_s': 17.0, 'voltage_v': 0.44521147460937505, 'current_ma': 0.0, 'age_s': 0.0}
+21:31:03.829453 TX login
+21:31:03.829453 RX login result=0
+21:31:03.829453 TX jump 0x00EC 62-1-1: ff ff ff ff ff ff ff ff 3e 01 1f 00 fe ec 00 0a 00 00 00 08 19 10 3e 18 01 20 01 28 02 25 5a
+21:31:03.830481 RX response 0x80EC result=0 proto={1: 25, 2: 62, 3: 1, 4: 0, 5: 1}: ff ff ff ff ff ff ff ff 3e 01 20 00 fe 00 ec 80 0a 00 00 00 08 19 10 3e 18 01 20 00 28 01 a4 5a
+21:31:04.833475 after: {'work_state': 'running', 'work_type': 16, 'step_no': 2, 'step_time_s': 0.6, 'voltage_v': 0.44525507812500004, 'current_ma': 0.0, 'age_s': 0.3}
+21:31:04.834019 RESULT: OK

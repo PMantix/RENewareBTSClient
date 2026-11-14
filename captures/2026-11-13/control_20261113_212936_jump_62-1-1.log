@@ -1,0 +1,2 @@
+21:29:39.885792 before: {'work_state': 'idle', 'work_type': 0, 'step_no': 1, 'step_time_s': 474.7, 'voltage_v': 0.44523691406250004, 'current_ma': 0.0, 'age_s': 0.5}
+21:29:39.885792 REFUSED: 62-1-1 must be '('running',)' for jump, is 'idle'. Nothing sent.
