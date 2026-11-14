@@ -1,0 +1,15 @@
+[project]
+name = "btsmon"
+version = "0.1.0"
+description = "AI-agent monitoring and control of Neware BTS cyclers (reverse-engineered)"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[tool.setuptools]
+packages = ["btsmon"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
