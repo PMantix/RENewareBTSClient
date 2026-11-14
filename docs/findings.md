@@ -167,4 +167,11 @@ Citations are relative to `vendor/decompiled/` unless a full path is given.
 - F-CS-11 Observed: `btsmon.live` (login, heartbeat 10 s, device list, info + select for
   both devices) receives RT for all 80 channels every ~2 s; values agree with the NDC
   monitor; GUI, middle machines and the 15 running channels unaffected (21:06, 21:12).
+- F-CS-12 **Observed** (2026-11-13 21:15-21:17, report
+  `reports/2026-11-13-first-control-pause-resume.md`): first control commands from our own
+  client, on 62-1-1 (no cell, GUI-started Rest step). Legacy Stop 0x000A
+  `FF×8 3E 01 1A 00 FE 0A 00 19 01 00.. 7B 5A` -> 0x800A result 0, RT WorkType 16->32,
+  GUI shows paused, `_log.ndc` records `0x2 Stop`. Continue 0x000D -> 0x800D result 0
+  (one extra trailing byte), WorkType 32->16. Body: devType u8 + channel mask u64
+  (bit = ChlID-1), header devID/unitID. No other channel affected.
 - Full detail with citations: `docs/protocol-clientserver.md` (its questions are P1-P10).

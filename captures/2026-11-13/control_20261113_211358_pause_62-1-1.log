@@ -1,0 +1,2 @@
+21:14:01.933483 before: {'work_state': 'idle', 'work_type': 0, 'step_no': 0, 'voltage_v': 0.44523208007812504, 'current_ma': 0.0, 'age_s': 0.0}
+21:14:01.933483 REFUSED: 62-1-1 must be 'running' for pause, is 'idle'. Nothing sent.

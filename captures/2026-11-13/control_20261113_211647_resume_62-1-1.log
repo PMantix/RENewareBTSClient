@@ -1,0 +1,7 @@
+21:16:51.457726 before: {'work_state': 'stopped', 'work_type': 32, 'step_no': 1, 'voltage_v': 0.4452423828125, 'current_ma': 0.0, 'age_s': 0.5}
+21:16:51.474196 TX login
+21:16:51.474196 RX login result=0
+21:16:51.474196 TX resume 0x000D 62-1-1: ff ff ff ff ff ff ff ff 3e 01 1a 00 fe 0d 00 19 01 00 00 00 00 00 00 00 7e 5a
+21:16:51.484934 RX response 0x800D dev=62 unit=1 result=0 devType=25 mask=0x1: ff ff ff ff ff ff ff ff 3e 01 1c 00 fe 00 0d 80 19 01 00 00 00 00 00 00 00 00 00 5a
+21:16:53.487466 after: {'work_state': 'running', 'work_type': 16, 'step_no': 1, 'voltage_v': 0.44525571289062504, 'current_ma': 0.0, 'age_s': 0.9}
+21:16:53.487466 RESULT: OK
