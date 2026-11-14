@@ -139,4 +139,12 @@ Citations are relative to `vendor/decompiled/` unless a full path is given.
     existing clients by IP.
   - Observed: a 127.0.0.1 connection is accepted and closed every 30 s all day
     (`Networt*.log`) without affecting the GUI or tests.
+- F-CS-8 **Observed** (2026-11-13, `captures/2026-11-13/probe_login.log`, report
+  `reports/2026-11-13-first-login-probe.md`): first live session from our own client.
+  Login `FF×8 00 00 12 00 00 03 01 02 18 5A` -> `FF×8 00 00 10 00 80 00 90 5A` (result 0),
+  no credentials. Server then pushes 0x0081 (byte 12 0xFE, result 0xFF, 658 B):
+  version 0x0802, svrVer `8.0.1.437 (2025.01.23)`. Plus heartbeat 0x0211 -> 0x8211 and
+  get-device-list 0x021B -> 0x821B work as documented; Plus responses have byte 12 = 0xFF.
+  Devices: devType 25, DevIDs 35 and 62, online, version 283. GUI, middle machines and all
+  15 running channels unaffected. Server logs a benign error 10038 when we close abruptly.
 - Full detail with citations: `docs/protocol-clientserver.md` (its questions are P1-P10).
