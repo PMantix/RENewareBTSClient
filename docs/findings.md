@@ -257,7 +257,9 @@ Citations are relative to `vendor/decompiled/` unless a full path is given.
 - F-START-5 Inferred (Client.SendStart83 / CmdStart82.SetStep / CmdStart80.SetRemark /
   CmdStart76.SetBarcodeCmd / CmdStart83): full packet layouts, see
   docs/protocol-clientserver.md 3.4; ported in `btsmon/start.py`, tested offline against
-  a fake server (tests/test_start.py). Not yet seen on the wire.
+  a fake server (tests/test_start.py). **Observed 2026-11-14**: first start on 62-1-1
+  (test_rest.xml -> test 142), all 8 stages result 0, server logged the same steps as
+  the GUI's test 141 (reports/2026-11-14-first-start.md).
 - F-START-6 Inferred (Client.OnRespStart83, Client.cs): after a successful start the GUI
   also writes the test's XML info to MySQL (MySql.UpdateXmlInfo) and sets up auto-backup.
   We do neither (MySQL is read-only for us); effect on the GUI's view of that test to be
