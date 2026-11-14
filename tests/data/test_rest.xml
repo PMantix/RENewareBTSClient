@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <config type="Step File" version="18" client_version="BTS Client 8.0.1.492(2025.01.23)(R3)" date="20261113212838" Guid="d323b0c9-6e98-4684-ad82-ae216d30f839">
+    <Head_Info>
+      <Operate Value="66" />
+      <Scale Value="1" />
+      <Start_Step Value="1" Hide_Ctrl_Step="0" />
+      <RateType Value="105" />
+    </Head_Info>
+    <Whole_Prt>
+      <Protect>
+        <Main>
+          <Volt>
+            <Upper Value="10000" />
+            <Lower Value="-10000" />
+          </Volt>
+        </Main>
+      </Protect>
+      <Record>
+        <Main>
+          <Time Value="30000" />
+        </Main>
+      </Record>
+    </Whole_Prt>
+    <Step_Info Num="3">
+      <Step1 Step_ID="1" Step_Type="4">
+        <Limit>
+          <Main>
+            <Time Value="36000000" />
+          </Main>
+        </Limit>
+      </Step1>
+      <Step2 Step_ID="2" Step_Type="4">
+        <Limit>
+          <Main>
+            <Time Value="360000000" />
+          </Main>
+        </Limit>
+      </Step2>
+      <Step3 Step_ID="3" Step_Type="6">
+      </Step3>
+    </Step_Info>
+    <SMBUS>
+      <SMBUS_Info Num="0" AdjacentInterval="0" />
+    </SMBUS>
+  </config>
+</root>

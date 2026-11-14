@@ -181,3 +181,41 @@ Citations are relative to `vendor/decompiled/` unless a full path is given.
   Clear flag legacy 0x0097 {devType u8, mask u64} from stopped -> 0x8097 result 0,
   WorkType 32 -> 0 (idle); server logs `0xE4 User clear channel`.
 - Full detail with citations: `docs/protocol-clientserver.md` (its questions are P1-P10).
+
+## Step files and the start sequence (2026-11-14)
+
+- F-STEP-1 Inferred + checked against server logs: BTS83 step record (Step.EncodeBts80,
+  Common/common/Step.cs:877-952) = `u16 len | u16 step index (GUI step no.) | i16 step id |
+  u8 step type | u32 map[n] | data | u32 1`. Maps from StepItem.EncodeF
+  (StepItem.cs:2333): up to 12 bit sets, trailing zero maps dropped (min 2), bit 31
+  NEXT_MAP on all but the last. Each set bit = one field in map/bit order, most with a
+  leading compare-operator byte (CompareBase.compareType, operator depends on step type,
+  e.g. limit current LE for charge, GE otherwise). Little-endian; base units ms, 0.1 mV,
+  mA, mAs. Implemented in `btsmon/steps.py`.
+- F-STEP-2 Observed: BtsServer logs every started step in
+  `BTSServer80/bin/StartInfo/StartInfo<date>.log` as `h_bts613_step` inserts with
+  `bitmap_data` (maps as big-endian u32 hex) and `step_data` (the data bytes). All 973
+  non-global step rows from 2026-11-11..13 decode and re-encode byte for byte with
+  `btsmon.steps` (fields seen: map1 limits/protections/record, map2 bit25 cap protect,
+  map3 bit6 abs-current protect, map4 bits 2-7 conditions + current range, map7 bit4
+  nominal capacity, map10 bit13 step remark, map11 bits 11-12 C-rate). Fixture:
+  `tests/data/startinfo_steps.json`. Type-254 rows (step 65535) are the global
+  protection record, sent separately.
+- F-STEP-3 Observed: the GUI's step file test_rest.xml (v18) run on 62-1-1 as test 141 is
+  reproduced byte for byte by `btsmon.stepfile.load` + `steps.logged_form` (whole-test
+  protect/record merged into non-end steps, Step.MergeSingleWholePrt Step.cs:2996;
+  Operate -> param1, RateType -> param2 on every step).
+- F-STEP-4 Inferred: at start the GUI also fills defaults from its system settings that
+  are not in the step file: C-rate steps get current = rate x capacity; with
+  `sysSet.IsCCCVRange` CCCV steps get the smallest current range >= the current
+  (Step.cs:2955-2995); with `bCurrAbsDefault` CC/CCCV steps get prt_curr_abs = range x
+  `dCurrAbsDefault` (Step.cs:1186-1205). Seen in DCR50_PR1_5-1.xml vs test 143 (range
+  25, prt_curr_abs 25.0, recomputed currents). Not ported yet.
+- F-STEP-5 Observed (BTSClient80/LogData/BTSClient20261113.log, test 141 start
+  21:30:45): GUI start sequence for one BTS83 channel, each stage sent after the previous
+  stage's reply: Map (PacketSendChlMap70) -> Barcode (ProtocBarcode) -> Remark (0x00C6
+  ProtocRemark) -> Step (0x00D1 ProtocSetStep82, 1 packet for <= 3500 B) -> StepGlobal
+  (0x00F0) -> GlobalPrt (0x00D7 ProtocSetGrobalProtect82) -> Start (0x00EB
+  ProtocStart83) -> reply result 0 -> StartConfirm (0x00E3 ProtocStartConfirm). Whole
+  sequence ~90 ms. Byte layouts of the Map/Barcode/GlobalPrt packets still to be
+  confirmed with a capture.
