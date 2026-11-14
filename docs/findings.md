@@ -156,4 +156,15 @@ Citations are relative to `vendor/decompiled/` unless a full path is given.
   0 = idle. Other pushes: 0x80E4 every 5 s (unit 0xFE), 0x80BF. No effect on the GUI or
   the 15 running channels. BtsServer logs `SessionDisconnect error 10038` whenever any
   client leaves (benign).
+- F-CS-10 Observed (decoded offline from `captures/2026-11-13/probe_devices.log`):
+  DevInfo83. Dev 35: SN-NEWARE-ZWJ-4S-LX, middle-machine software 4S_4.3.7.0_20241105,
+  5 XWJ units, each `ChgRange=DChgRange=12000`, `CurrRange=[1000, 6000, 12000]` (mA),
+  `VolRange=5` V, SampleRate 2, firmware M04310500. Dev 62: 4S_4.3.3.3_20230731, 5 units,
+  `ChgRange=50`, `CurrRange=[1, 25, 50]` (mA), `VolRange=5`, SampleRate 3, firmware
+  M04310301/M04310500. Both: ChlMap of 40 main channels, units 1-5 x ChlID 1-8,
+  RealChlID 0-7, no aux/parallel/temp boxes. So dev 35 is a 5 V / 12 A model, dev 62 a
+  5 V / 50 mA model. Use these ranges as hard limits for any future start.
+- F-CS-11 Observed: `btsmon.live` (login, heartbeat 10 s, device list, info + select for
+  both devices) receives RT for all 80 channels every ~2 s; values agree with the NDC
+  monitor; GUI, middle machines and the 15 running channels unaffected (21:06, 21:12).
 - Full detail with citations: `docs/protocol-clientserver.md` (its questions are P1-P10).

@@ -48,7 +48,12 @@ Cyclers source/sink amps into real cells, often unattended for days.
 7. Files under `BTSServer80\NdcFile\` are being written by the server: read them only
    through `btsmon.safe_read.read_shared` (full share flags, handle closed at once), never
    with plain `open()`/`shutil`/editors, never write/rename/delete there, poll >= 30 s.
-8. Never invent protocol commands on live hardware. A command is usable when it is
+8. Connections to BtsServer (8001) go through `btsmon.protocol`, whose packet builder only
+   allows the Observed-safe read-only requests (login, heartbeat, device list, device info,
+   select device). Adding any other request (stop/continue/jump/start/...) to that set is a
+   control change: get the user's explicit go-ahead first, test on a user-named free
+   channel. The MCP server keeps one such read-only connection open while it runs.
+9. Never invent protocol commands on live hardware. A command is usable when it is
    documented here as Observed (seen in a capture) or the user approves a first test on
    a free channel with no cell / a dummy load.
 
@@ -71,6 +76,7 @@ Cyclers source/sink amps into real cells, often unattended for days.
 |---|---|---|
 | 0 | Static RE: decompile client, document XML API + client/server protocol | done |
 | 1 | Read-only monitoring: `btsmon.monitor` + MCP server `btsmon.mcp_server` from live NDC files, incl. finished/stopped/protect from `_log.ndc` | done |
+| 1b | Live read-only feed over 8001 (`btsmon.live`, 2 s), used by the MCP server | done |
 | 2 | Transport for control. Candidates: (a) Neware XML API, needs registration code from Neware; (b) host Neware's own `Network.dll` `Client` class from our process (pythonnet/C#); (c) our own Python implementation of the 8001 protocol | todo |
 | 3 | Control on a free test channel with dummy load: start/stop/pause/continue/goto | todo |
 | 4 | Python driver + MCP server with guardrails (channel allowlist, limits, audit log) | todo |

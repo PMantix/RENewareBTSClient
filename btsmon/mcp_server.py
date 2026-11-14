@@ -17,12 +17,16 @@ from mcp.server.mcpserver import MCPServer
 from mcp.types import ToolAnnotations
 
 from . import logcodes
+from .live import LiveFeed
+from .ndc import STEP_TYPES
 from .monitor import DEFAULT_ROOT, MIN_POLL_S, ChannelState, TestFiles, discover, read_state
 from .ndc import parse_data, parse_log, parse_runinfo, parse_steps
 from .safe_read import read_shared
 
 ROOT = os.environ.get("BTSMON_NDC_ROOT", DEFAULT_ROOT)
 DAYS = int(os.environ.get("BTSMON_DAYS", "60"))
+LIVE_ENABLED = os.environ.get("BTSMON_LIVE", "1") != "0"
+_live: LiveFeed | None = None
 RO = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)
 
 server = MCPServer(
@@ -30,8 +34,9 @@ server = MCPServer(
     instructions=(
         "Read-only monitor of Neware BTS battery cyclers on this PC. Channels are named "
         "'<devID>-<unit>-<channel>' (e.g. '35-4-1'). State is running / finished / stopped / "
-        "protect / unknown. Data lags real time by up to a few minutes (server flush "
-        "interval). Device clocks run ~1 h ahead of the PC; 'device_time' fields use the "
+        "protect / unknown. When the live feed is connected (get_system_status), V/I/step/"
+        "capacity come from the server's realtime stream (~2 s old, source='live'); otherwise "
+        "from the server's data files (up to a few minutes old, source='files'). Device clocks run ~1 h ahead of the PC; 'device_time' fields use the "
         "device clock. Current is in mA (negative = discharge), capacity in mAh. "
         "This server cannot start, stop or change anything."),
 )
@@ -62,7 +67,35 @@ def _state(channel: str) -> ChannelState:
     return _cached(f"state:{channel}", lambda: read_state(tf))
 
 
+def _overlay_live(d: dict) -> dict:
+    """Replace file-based values with the realtime feed when it is fresh."""
+    lv = _live.channel(d["channel"]) if _live else None
+    if not lv or not lv["live"]:
+        d["source"] = "files"
+        return d
+    d.update({
+        "source": "live", "data_age_min": round(lv["age_s"] / 60, 2),
+        "voltage_v": round(lv["voltage_v"], 5), "current_ma": round(lv["current_ma"] or 0.0, 5),
+        "step_no": lv["step_no"],
+        "step_type": STEP_TYPES.get(lv["step_type_code"], d.get("step_type")),
+        "step_time_h": round(lv["step_time_s"] / 3600, 3),
+        "charge_mah": round(lv["charge_mah"], 4), "discharge_mah": round(lv["discharge_mah"], 4),
+        "work_state": lv["work_state"], "protect_code": lv["protect_code"],
+    })
+    if lv["work_state"] == "running":
+        d["state"], d["reason"] = "running", None
+    elif lv["work_state"] == "stopped" and d["state"] == "running":
+        d["state"] = "stopped"
+    if lv["protect_code"]:
+        d["protect_text"] = logcodes.describe(lv["protect_code"])
+    return d
+
+
 def _summary(s: ChannelState) -> dict:
+    return _overlay_live(_summary_files(s))
+
+
+def _summary_files(s: ChannelState) -> dict:
     n = s.snapshot or {}
     return {
         "channel": s.channel, "state": s.state, "reason": s.reason, "test_id": s.test_id,
@@ -84,6 +117,21 @@ def list_channels(only_running: bool = False) -> list[dict]:
     """
     out = [_summary(_state(ch)) for ch in sorted(_tests())]
     return [s for s in out if s["state"] == "running"] if only_running else out
+
+
+@server.tool(annotations=RO)
+def get_system_status() -> dict:
+    """Health of the monitor: realtime feed connection, BTS server version, devices
+    (IP, channel count, current/voltage ranges = hardware limits), data sources."""
+    snap = _live.snapshot() if _live else None
+    return {
+        "live_feed": "disabled" if snap is None else ("connected" if snap["connected"] else "disconnected"),
+        "live_last_error": snap and snap["last_error"],
+        "live_channels_fresh": snap and sum(1 for c in snap["channels"].values() if c["live"]),
+        "server": snap and snap["server"],
+        "devices": snap and snap["devices"],
+        "files_root": ROOT,
+    }
 
 
 @server.tool(annotations=RO)
@@ -156,7 +204,14 @@ def explain_log_code(code: str) -> dict:
 
 
 def main() -> None:
-    server.run("stdio")
+    global _live
+    if LIVE_ENABLED:
+        _live = LiveFeed(log_dir=os.environ.get("BTSMON_LOG_DIR", os.path.join(os.getcwd(), "logs"))).start()
+    try:
+        server.run("stdio")
+    finally:
+        if _live:
+            _live.stop()
 
 
 if __name__ == "__main__":
