@@ -259,14 +259,31 @@ def redact_svr_version(raw: bytes) -> bytes:
 
 
 # ---- interpretation --------------------------------------------------------------------
-WORK_TYPES = {0: "idle", 16: "running", 32: "stopped"}   # Observed values (F-CS-9)
+# Raw RTData83.WorkType -> state, as Common.WorkType.ToType (Common/common/WorkType.cs:121-157):
+# values > 255 use the high byte; otherwise bits 0x30: 0 finish/idle, 16 running, 32 stop,
+# anything else protect. Observed: 0, 16, 32 (F-CS-9).
+_WT_HIGH = {1: "pause", 2: "finished", 3: "offline_pause", 4: "beep", 5: "sync_ctrl", 7: "light",
+            8: "vacuum", 9: "release", 10: "leakage_rate", 11: "jam", 12: "wait_timeout",
+            13: "reserve_pause", 14: "wait_start", 15: "finish_protect"}
+
+
+def work_state(raw: int | None) -> str:
+    if raw is None:
+        return "unknown"
+    if raw > 255:
+        hi = raw >> 8
+        if hi == 6:
+            raw &= 0xFF
+        else:
+            return _WT_HIGH.get(hi, f"code{raw}")
+    return {0: "idle", 16: "running", 32: "stopped"}.get(raw & 0x30, "protect")
 
 
 def rt_to_channel(rt: dict) -> dict:
     """RTData83 raw -> engineering units (F-CS-9)."""
     return {
         "work_type": rt.get("WorkType"),
-        "work_state": WORK_TYPES.get(rt.get("WorkType"), f"code{rt.get('WorkType')}"),
+        "work_state": work_state(rt.get("WorkType")),
         "cycle": rt.get("Cycle"),
         "step_no": rt.get("StepID"),
         "step_type_code": rt.get("StepType"),
