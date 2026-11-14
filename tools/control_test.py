@@ -12,6 +12,8 @@ Byte layout (BTSLib decompile, Inferred until this tool runs):
 
     python tools/control_test.py pause  62-1-1
     python tools/control_test.py resume 62-1-1
+    python tools/control_test.py jump   62-1-1 <step_no>
+    python tools/control_test.py clear  62-1-1
 """
 from __future__ import annotations
 
@@ -27,27 +29,50 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 from btsmon import protocol as P  # noqa: E402
 from btsmon.live import LiveFeed  # noqa: E402
 
-CMDS = {"pause": (0x000A, "running", "stopped"), "resume": (0x000D, "stopped", "running")}
+# action: (cmdEx, required state(s) before, expected state after)
+CMDS = {"pause": (0x000A, ("running",), "stopped"),
+        "resume": (0x000D, ("stopped",), "running"),
+        "jump": (0x00EC, ("running",), "running"),
+        "clear": (0x0097, ("stopped", "protect", "pause"), "idle")}
 
 
 def pkt_chl_cmd(cmd_ex: int, dev_type: int, dev_id: int, unit: int, chl: int) -> bytes:
-    if cmd_ex not in (0x000A, 0x000D):
-        raise ValueError("only stop/continue are implemented")
+    """Legacy BTSCS channel command: devType u8 + channel mask u64 (stop/continue/clear)."""
+    if cmd_ex not in (0x000A, 0x000D, 0x0097):
+        raise ValueError("only stop/continue/clear-flag are implemented")
     if not 1 <= chl <= 64:
         raise ValueError("bad channel")
     body = bytes([0xFE]) + struct.pack("<H", cmd_ex) + bytes([dev_type]) + struct.pack("<Q", 1 << (chl - 1))
     return P.frame(body, dev_id, unit)
 
 
+def _pb(field: int, value: int) -> bytes:
+    return P._varint(field << 3) + P._varint(value & 0xFFFFFFFFFFFFFFFF)
+
+
+def pkt_jump83(dev_type: int, dev_id: int, unit: int, chl: int, step_id: int) -> bytes:
+    """PacketProto 0x00EC ProtocJump83{DevType, DevID, UnitID, Channel mask, StepID}
+    (Network/Network/Client.cs SendJump83). All fields written, as the C# proto2 code does."""
+    if not 1 <= chl <= 64 or not 1 <= step_id <= 65535:
+        raise ValueError("bad channel or step")
+    proto = _pb(1, dev_type) + _pb(2, dev_id) + _pb(3, unit) + _pb(4, 1 << (chl - 1)) + _pb(5, step_id)
+    body = bytes([0xFE]) + struct.pack("<HI", 0x00EC, len(proto)) + proto
+    return P.frame(body, dev_id, unit)
+
+
 def main(argv) -> int:
     action, name = argv[1], argv[2]
+    step = int(argv[3]) if action == "jump" else None
     cmd_ex, need_before, want_after = CMDS[action]
     cfg = json.load(open(os.path.join(os.path.dirname(__file__), "..", "config", "test_channels.json")))
     ch = cfg["channels"].get(name)
     if ch is None:
         print(f"REFUSED: {name} is not in config/test_channels.json")
         return 2
-    pkt = pkt_chl_cmd(cmd_ex, ch["dev_type"], ch["dev_id"], ch["unit"], ch["chl"])
+    if action == "jump":
+        pkt = pkt_jump83(ch["dev_type"], ch["dev_id"], ch["unit"], ch["chl"], step)
+    else:
+        pkt = pkt_chl_cmd(cmd_ex, ch["dev_type"], ch["dev_id"], ch["unit"], ch["chl"])
     os.makedirs("logs", exist_ok=True)
     log = open(os.path.join("logs", f"control_{datetime.now():%Y%m%d_%H%M%S}_{action}_{name}.log"), "w", encoding="utf-8")
 
@@ -61,8 +86,9 @@ def main(argv) -> int:
         while time.time() < t_end and not (feed.channel(name) or {}).get("live"):
             time.sleep(0.5)
         before = feed.channel(name)
-        out(f"before: {before and {k: before[k] for k in ('work_state', 'work_type', 'step_no', 'voltage_v', 'current_ma', 'age_s')}}")
-        if not before or before["work_state"] != need_before:
+        keys = ('work_state', 'work_type', 'step_no', 'step_time_s', 'voltage_v', 'current_ma', 'age_s')
+        out(f"before: {before and {k: before[k] for k in keys}}")
+        if not before or before["work_state"] not in need_before:
             out(f"REFUSED: {name} must be '{need_before}' for {action}, is "
                 f"'{before and before['work_state']}'. Nothing sent.")
             return 3
@@ -97,10 +123,18 @@ def main(argv) -> int:
                 for raw in P.split_frames(buf):
                     f = P.parse_frame(raw)
                     if f.cmd_ex == (cmd_ex | 0x8000):
-                        dt, mask = raw[16], struct.unpack_from("<Q", raw, 17)[0]
                         got = f.result
-                        out(f"RX response 0x{f.cmd_ex:04X} dev={f.dev_id} unit={f.unit} result={f.result} "
-                            f"devType={dt} mask=0x{mask:X}: {raw.hex(' ')}")
+                        if cmd_ex == 0x00EC:
+                            n = struct.unpack_from("<I", raw, 16)[0]
+                            resp = {fn: v for fn, _, v in P.pb_fields(raw[20:20 + n])}
+                            got = resp.get(4, f.result)
+                            out(f"RX response 0x{f.cmd_ex:04X} result={f.result} proto={resp}: {raw.hex(' ')}")
+                        else:
+                            dt, mask = raw[16], struct.unpack_from("<Q", raw, 17)[0]
+                            out(f"RX response 0x{f.cmd_ex:04X} dev={f.dev_id} unit={f.unit} result={f.result} "
+                                f"devType={dt} mask=0x{mask:X}: {raw.hex(' ')}")
+                    elif f.cmd_ex is not None and f.cmd_ex not in (P.RT_DATA_83, P.SVR_VERSION, 0x80E4):
+                        out(f"RX other 0x{f.cmd_ex:04X} result={f.result}: {raw[:40].hex(' ')}")
             if got is None:
                 out("no response within 5 s")
         finally:
@@ -114,10 +148,12 @@ def main(argv) -> int:
         while time.time() < t_end:
             time.sleep(1)
             after = feed.channel(name)
-            if after and after["work_state"] == want_after and after["age_s"] < 3:
+            if after and after["work_state"] == want_after and after["age_s"] < 3 and (
+                    action != "jump" or (after["step_no"] == step and after["step_time_s"] < before["step_time_s"])):
                 break
-        out(f"after: {after and {k: after[k] for k in ('work_state', 'work_type', 'step_no', 'voltage_v', 'current_ma', 'age_s')}}")
-        ok = got == 0 and after and after["work_state"] == want_after
+        out(f"after: {after and {k: after[k] for k in keys}}")
+        ok = got == 0 and after and after["work_state"] == want_after and (
+            action != "jump" or (after["step_no"] == step and after["step_time_s"] < before["step_time_s"]))
         out("RESULT: " + ("OK" if ok else "NOT CONFIRMED - check the GUI"))
         return 0 if ok else 1
     finally:

@@ -55,11 +55,16 @@ def describe(code: int, codes: dict[int, LogCode] | None = None) -> str:
 
 
 def end_state(events: list[LogEvent], codes: dict[int, LogCode] | None = None) -> tuple[str, str | None]:
-    """Classify how a test ended from its log: finished / stopped / protect / unknown.
+    """Classify how a test ended from its log: finished / stopped / protect / cleared / unknown.
 
     Returns (state, reason). Only meaningful for a channel that is not live.
     """
     codes = load() if codes is None else codes
+    sig = [e for e in events if e.code != LOG_CODE_STATUS_CHANGED]
+    if sig and sig[-1].code == USER_CLEAR:
+        # channel was cleared by a user; report what it was cleared from
+        prev = next((e for e in reversed(sig) if e.code != USER_CLEAR), None)
+        return "cleared", (f"after {describe(prev.code, codes)}" if prev else None)
     for ev in reversed(events):
         if ev.code in (LOG_CODE_STATUS_CHANGED, USER_CLEAR):
             continue

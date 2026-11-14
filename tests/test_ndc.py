@@ -154,7 +154,8 @@ def test_parse_log_spans_pages():
 @pytest.mark.parametrize("codes,expected", [
     ([0x1B2, 0x1, 0x285], ("finished", None)),
     ([0x1B2, 0x2, 0x285], ("stopped", None)),
-    ([0x1B2, 0x186, 0x285, 0xE4, 0x285], ("protect", "0x186 CC, exceeding voltage limit.")),
+    ([0x1B2, 0x186, 0x285], ("protect", "0x186 CC, exceeding voltage limit.")),
+    ([0x1B2, 0x186, 0x285, 0xE4, 0x285], ("cleared", "after 0x186 CC, exceeding voltage limit.")),
     ([0x1B2], ("unknown", "0x1B2 Time limit jump")),
     ([], ("unknown", None)),
 ])

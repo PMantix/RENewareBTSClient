@@ -108,7 +108,7 @@ def read_state(tf: TestFiles, live_window_s: float = 900) -> ChannelState:
         err = f"{type(e).__name__}: {e}"
     live = age < live_window_s
     state, reason = logcodes.end_state(events)
-    if state not in ("finished", "stopped", "protect"):
+    if state not in ("finished", "stopped", "protect", "cleared"):
         state, reason = ("running", None) if live else ("unknown", reason)
     elif live and snap and events and max(e.index for e in events) < snap.index:
         # a terminal event older than the newest data point belongs to an earlier
@@ -151,7 +151,7 @@ def print_table(states: list[ChannelState]) -> None:
               f"{_fmt(None if n.get('step_time_s') is None else n['step_time_s'] / 3600, '7.2f')} "
               f"{_fmt(None if n.get('elapsed_s') is None else n['elapsed_s'] / 3600, '7.2f')} "
               f"{_fmt(n.get('charge_mah'), '9.3f')} {_fmt(n.get('discharge_mah'), '9.3f')}"
-              + (f"  {s.reason}" if s.reason and s.state == "protect" else "")
+              + (f"  {s.reason}" if s.reason and s.state in ("protect", "cleared") else "")
               + (f"  ERROR {s.error}" if s.error else ""))
 
 
